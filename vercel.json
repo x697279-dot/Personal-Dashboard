@@ -1,18 +1,5 @@
 {
-  "headers": [
-    {
-      "source": "/(.*)\\.(js|mjs|cjs)",
-      "headers": [
-        { "key": "Content-Type", "value": "application/javascript" }
-      ]
-    },
-    {
-      "source": "/(.*)\\.css",
-      "headers": [
-        { "key": "Content-Type", "value": "text/css" }
-      ]
-    }
-  ],
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/(.*)",
