@@ -3,9 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    allowedHosts: [
-      'my.xjydfy.fun' // 将你的域名加到这里
-    ]
-  }
+  // 必须添加 base: './'，这能确保所有的静态资源引用都是相对路径
+  base: './' 
 })
