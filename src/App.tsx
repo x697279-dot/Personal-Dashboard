@@ -66,7 +66,7 @@ const defaultMessages: GuestMessage[] = [
   {
     id: 'welcome-1',
     name: '站长',
-    content: '欢迎来到我的个人仪表盘，服务入口暂不开放跳转，可以在这里留下你的想法。',
+    content: '',
     createdAt: new Date().toISOString(),
   },
 ];
@@ -320,8 +320,6 @@ function SceneCard({
     <section className="scene-card" aria-label="3D 服务入口">
       <div className="scene-copy">
         <p className="eyebrow">3D Service Hub</p>
-        <h2>点击物件查看服务信息</h2>
-        <p>这里不再跳转外链，只作为可视化服务地图。服务器代表 NAS，书本代表博客，几何体代表代码预览。</p>
       </div>
       <div ref={mountRef} className="three-scene" />
     </section>
@@ -360,7 +358,7 @@ function MessageBoard() {
       <div className="message-panel">
         <p className="eyebrow">Guest Book</p>
         <h2>访客留言板</h2>
-        <p className="panel-copy">留下一个问候、建议或服务访问申请。留言会保存在当前浏览器中，刷新后仍可看到。</p>
+        <p className="panel-copy">留下一个问候、建议或服务访问申请。</p>
 
         <form className="message-form" onSubmit={handleSubmit}>
           <label>
