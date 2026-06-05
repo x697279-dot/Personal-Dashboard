@@ -66,7 +66,7 @@ const defaultMessages: GuestMessage[] = [
   {
     id: 'welcome-1',
     name: '站长',
-    content: '',
+    content: '测试',
     createdAt: new Date().toISOString(),
   },
 ];
