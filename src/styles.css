@@ -1018,3 +1018,684 @@ h3 {
     min-height: 48px;
   }
 }
+
+body:has(.capy-home) {
+  background: #fff3c6;
+}
+
+.capy-home {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.92), transparent 18rem),
+    radial-gradient(circle at 82% 18%, rgba(109, 216, 255, 0.36), transparent 20rem),
+    linear-gradient(135deg, #fff0b8 0%, #ffd57b 48%, #ffad57 100%);
+  color: #4a2a13;
+}
+
+.capy-home::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
+  background-size: 54px 54px;
+  content: "";
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.78), transparent 82%);
+}
+
+.capy-hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.92fr) minmax(320px, 1.08fr);
+  align-items: center;
+  gap: 40px;
+  width: min(1180px, calc(100% - 32px));
+  min-height: 92vh;
+  margin: 0 auto;
+  padding: 74px 0 112px;
+}
+
+.capy-copy {
+  position: relative;
+}
+
+.capy-kicker {
+  display: inline-flex;
+  margin: 0 0 18px;
+  border: 2px solid rgba(96, 54, 20, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.44);
+  padding: 10px 16px;
+  color: #965319;
+  font-size: 0.78rem;
+  font-weight: 1000;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+}
+
+.capy-copy h1 {
+  display: grid;
+  max-width: 760px;
+  margin: 0;
+  color: #5a3214;
+  font-size: clamp(3.1rem, 7.4vw, 7.2rem);
+  font-weight: 1000;
+  letter-spacing: -0.055em;
+  line-height: 0.96;
+  text-shadow:
+    0 6px 0 rgba(255, 255, 255, 0.46),
+    0 24px 60px rgba(128, 60, 18, 0.18);
+}
+
+.capy-copy h1 span {
+  display: block;
+}
+
+.capy-subtitle {
+  max-width: 520px;
+  margin: 28px 0 0;
+  color: rgba(74, 42, 19, 0.76);
+  font-size: clamp(1rem, 2vw, 1.22rem);
+  font-weight: 800;
+  line-height: 1.8;
+}
+
+.capy-start-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  margin-top: 34px;
+  border: 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, #ff7a1a, #ffbd2e),
+    #ff8f2f;
+  color: #fffaf0;
+  cursor: pointer;
+  padding: 0 34px;
+  font-size: 1.05rem;
+  font-weight: 1000;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 20px 0 #b85d20,
+    0 34px 70px rgba(145, 70, 24, 0.28);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.capy-start-button::after {
+  position: absolute;
+  inset: 8px 12px auto;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.34);
+  content: "";
+}
+
+.capy-start-button:hover {
+  transform: translateY(-5px) rotate(-1deg);
+  filter: saturate(1.08);
+  box-shadow:
+    0 24px 0 #b85d20,
+    0 42px 90px rgba(145, 70, 24, 0.32);
+}
+
+.capy-start-button:disabled {
+  cursor: wait;
+  opacity: 0.82;
+}
+
+.capy-start-button span {
+  position: relative;
+  z-index: 1;
+}
+
+.capy-stage {
+  position: relative;
+  display: grid;
+  min-height: 620px;
+  place-items: center;
+}
+
+.capy-platform {
+  position: absolute;
+  right: 8%;
+  bottom: 74px;
+  width: min(500px, 78vw);
+  height: 112px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.84), rgba(255, 226, 143, 0.7) 58%, rgba(221, 143, 64, 0.2) 61%, transparent 66%);
+  filter: blur(1px);
+  box-shadow: 0 36px 70px rgba(137, 79, 27, 0.18);
+}
+
+.capy-spotlight {
+  position: absolute;
+  inset: 8% 0 auto;
+  height: 62%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 52% 40%, rgba(255, 255, 255, 0.72), rgba(255, 223, 105, 0.26) 42%, transparent 68%),
+    radial-gradient(circle at 70% 70%, rgba(125, 226, 205, 0.24), transparent 40%);
+  animation: capy-glow 4.8s ease-in-out infinite;
+  filter: blur(4px);
+}
+
+.capy-real-mascot {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(430px, 68vw);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 46% 46% 42% 42%;
+  animation:
+    capy-float 4.2s ease-in-out infinite,
+    capy-jelly 5.8s ease-in-out infinite;
+  filter: drop-shadow(0 34px 46px rgba(129, 71, 24, 0.18));
+}
+
+.capy-real-mascot::before {
+  position: absolute;
+  inset: 8%;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.42);
+  content: "";
+  filter: blur(18px);
+  animation: capy-pulse 3.2s ease-in-out infinite;
+}
+
+.capy-real-mascot img {
+  display: block;
+  width: min(330px, 78%);
+  height: auto;
+  border-radius: 24px;
+  mix-blend-mode: multiply;
+  transform-origin: 50% 80%;
+  animation: capy-breathe 3.4s ease-in-out infinite;
+}
+
+.capy-bubble {
+  position: absolute;
+  z-index: 3;
+  border-radius: 999px;
+  background: #73d786;
+  box-shadow: 0 0 20px rgba(115, 215, 134, 0.45);
+  animation: capy-bubble 4.6s ease-in-out infinite;
+}
+
+.capy-bubble-one {
+  top: 30%;
+  left: 14%;
+  width: 16px;
+  height: 16px;
+}
+
+.capy-bubble-two {
+  right: 10%;
+  bottom: 34%;
+  width: 20px;
+  height: 20px;
+  background: #7bd7ff;
+  box-shadow: 0 0 20px rgba(123, 215, 255, 0.45);
+  animation-delay: -1.6s;
+}
+
+.capy-ticket,
+.capy-watermelon,
+.capy-umbrella,
+.capy-orb {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.capy-ticket {
+  display: grid;
+  width: 150px;
+  height: 82px;
+  place-items: center;
+  border: 4px solid #245f56;
+  border-radius: 18px;
+  background: #77dbc7;
+  color: #245f56;
+  font-size: 2rem;
+  font-weight: 1000;
+  box-shadow: 0 18px 36px rgba(60, 61, 26, 0.12);
+  animation: capy-drift 6s ease-in-out infinite;
+}
+
+.capy-ticket-one {
+  top: 14%;
+  right: 8%;
+  transform: rotate(14deg);
+}
+
+.capy-ticket-two {
+  left: 6%;
+  bottom: 22%;
+  transform: rotate(-10deg);
+  animation-delay: -2s;
+}
+
+.capy-watermelon {
+  right: 18%;
+  bottom: 13%;
+  width: 128px;
+  height: 74px;
+  border-radius: 0 0 999px 999px;
+  background:
+    radial-gradient(circle at 35% 32%, #141414 0 5px, transparent 6px),
+    radial-gradient(circle at 58% 36%, #141414 0 5px, transparent 6px),
+    linear-gradient(#f33d3d 0 68%, #ffffff 69% 78%, #1fa767 79%);
+  transform: rotate(8deg);
+  animation: capy-drift 7s ease-in-out infinite;
+}
+
+.capy-umbrella {
+  top: 10%;
+  left: 40%;
+  width: 160px;
+  height: 92px;
+  border-radius: 90px 90px 16px 16px;
+  background:
+    radial-gradient(circle at 28% 24%, #fff 0 12px, transparent 13px),
+    linear-gradient(90deg, #ffffff 0 20%, #78df7b 21% 36%, #ffffff 37% 64%, #78df7b 65% 80%, #ffffff 81%);
+  box-shadow: 0 18px 36px rgba(65, 103, 45, 0.12);
+  animation: capy-drift 8s ease-in-out infinite;
+}
+
+.capy-orb {
+  border-radius: 999px;
+  filter: blur(1px);
+  opacity: 0.72;
+}
+
+.capy-orb-one {
+  top: 18%;
+  left: 18%;
+  width: 18px;
+  height: 18px;
+  background: #6bd36f;
+}
+
+.capy-orb-two {
+  right: 12%;
+  bottom: 34%;
+  width: 28px;
+  height: 28px;
+  background: #8fd9ff;
+}
+
+.capy-marquee {
+  position: relative;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  overflow: hidden;
+  border-top: 3px solid rgba(85, 48, 19, 0.16);
+  background: rgba(255, 255, 255, 0.42);
+  color: rgba(88, 50, 22, 0.78);
+  font-size: clamp(1.8rem, 5vw, 4.8rem);
+  font-weight: 1000;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+}
+
+.capy-marquee span {
+  display: inline-flex;
+  padding-right: 32px;
+  animation: capy-marquee 18s linear infinite;
+}
+
+.capy-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255, 188, 59, 0.45), transparent 28rem),
+    rgba(78, 41, 16, 0.58);
+  color: #fffaf0;
+  backdrop-filter: blur(14px);
+}
+
+.capy-loading-card {
+  display: grid;
+  width: min(360px, calc(100% - 40px));
+  justify-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.48);
+  border-radius: 30px;
+  background: rgba(255, 142, 42, 0.82);
+  box-shadow: 0 34px 90px rgba(84, 44, 16, 0.32);
+  padding: 30px 26px;
+  text-align: center;
+}
+
+.capy-loading-card p {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  font-weight: 1000;
+  letter-spacing: 0.14em;
+}
+
+.capy-loading-card h2 {
+  margin: 0 0 10px;
+  font-size: 1.7rem;
+}
+
+.capy-loading-card span {
+  color: rgba(255, 250, 240, 0.82);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.capy-gallery-shell {
+  position: relative;
+  z-index: 2;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 88px 0 120px;
+}
+
+.capy-gallery-intro {
+  display: grid;
+  max-width: 760px;
+  margin-bottom: 34px;
+}
+
+.capy-gallery-intro h2 {
+  margin: 0;
+  color: #5a3214;
+  font-size: clamp(2.1rem, 5vw, 4.8rem);
+  font-weight: 1000;
+  letter-spacing: -0.065em;
+  line-height: 0.95;
+}
+
+.capy-gallery-section {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.48fr) minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+  border-top: 2px solid rgba(90, 50, 20, 0.16);
+  padding: 34px 0;
+}
+
+.capy-gallery-copy {
+  position: sticky;
+  top: 28px;
+  border: 2px solid rgba(90, 50, 20, 0.16);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 24px 70px rgba(117, 67, 28, 0.12);
+  padding: 24px;
+  backdrop-filter: blur(12px);
+}
+
+.capy-gallery-copy p {
+  margin: 0 0 12px;
+  color: #af6020;
+  font-size: 0.76rem;
+  font-weight: 1000;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.capy-gallery-copy h3 {
+  margin: 0 0 14px;
+  color: #5a3214;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 1000;
+  letter-spacing: -0.055em;
+}
+
+.capy-gallery-copy span {
+  display: block;
+  color: rgba(74, 42, 19, 0.74);
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.capy-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 18px;
+}
+
+.capy-photo-card {
+  position: relative;
+  grid-column: span 3;
+  min-height: 360px;
+  margin: 0;
+  overflow: hidden;
+  border: 8px solid rgba(255, 255, 255, 0.72);
+  border-radius: 34px;
+  background: rgba(255, 255, 255, 0.46);
+  box-shadow: 0 28px 80px rgba(125, 72, 30, 0.18);
+  transform: rotate(var(--rotate, -1deg));
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.capy-photo-card:nth-child(2n) {
+  --rotate: 1.2deg;
+}
+
+.capy-photo-card:nth-child(3n) {
+  --rotate: -0.4deg;
+}
+
+.capy-photo-card:hover {
+  transform: translateY(-8px) rotate(0deg);
+  box-shadow: 0 38px 100px rgba(125, 72, 30, 0.24);
+}
+
+.capy-photo-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  object-fit: cover;
+}
+
+.capy-gallery-section.wide-layout .capy-photo-card:first-child {
+  grid-column: span 4;
+}
+
+.capy-gallery-section.wide-layout .capy-photo-card:not(:first-child) {
+  grid-column: span 2;
+}
+
+@keyframes capy-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+
+  50% {
+    transform: translateY(-18px) rotate(1.4deg);
+  }
+}
+
+@keyframes capy-jelly {
+  0%,
+  100% {
+    scale: 1 1;
+  }
+
+  42% {
+    scale: 1.025 0.985;
+  }
+
+  58% {
+    scale: 0.99 1.02;
+  }
+}
+
+@keyframes capy-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.035);
+  }
+}
+
+@keyframes capy-glow {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes capy-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.82;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes capy-bubble {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(10px, -18px, 0) scale(1.2);
+  }
+}
+
+@keyframes capy-drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -18px;
+  }
+}
+
+@keyframes capy-marquee {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (max-width: 860px) {
+  .capy-hero {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding-top: 44px;
+  }
+
+  .capy-stage {
+    min-height: 470px;
+  }
+
+  .capy-real-mascot {
+    width: min(390px, 82vw);
+  }
+
+  .capy-platform {
+    right: 50%;
+    bottom: 38px;
+    transform: translateX(50%);
+  }
+
+  .capy-ticket,
+  .capy-umbrella,
+  .capy-watermelon {
+    opacity: 0.78;
+    scale: 0.78;
+  }
+
+  .capy-gallery-section {
+    grid-template-columns: 1fr;
+  }
+
+  .capy-gallery-copy {
+    position: relative;
+    top: auto;
+  }
+
+  .capy-photo-card,
+  .capy-gallery-section.wide-layout .capy-photo-card:first-child,
+  .capy-gallery-section.wide-layout .capy-photo-card:not(:first-child) {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 560px) {
+  .capy-copy h1 {
+    font-size: clamp(2.7rem, 15vw, 4.4rem);
+    letter-spacing: -0.04em;
+    line-height: 1.02;
+  }
+
+  .capy-subtitle {
+    font-size: 0.98rem;
+  }
+
+  .capy-start-button {
+    width: 100%;
+  }
+
+  .capy-stage {
+    min-height: 390px;
+  }
+
+  .capy-real-mascot {
+    width: min(310px, 78vw);
+  }
+
+  .capy-real-mascot img {
+    width: min(250px, 78%);
+  }
+
+  .capy-platform {
+    bottom: 28px;
+    height: 82px;
+  }
+
+  .capy-gallery-shell {
+    width: min(100% - 20px, 1180px);
+    padding: 58px 0 90px;
+  }
+
+  .capy-photo-card,
+  .capy-photo-card img {
+    min-height: 300px;
+  }
+}
