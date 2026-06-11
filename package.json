@@ -6,11 +6,12 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "three": "latest",
-    "vite": "latest",
-    "typescript": "latest",
+    "phaser": "^4.1.0",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "three": "latest",
+    "typescript": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
     "@types/react": "latest",
@@ -18,4 +19,3 @@
     "@types/three": "latest"
   }
 }
-

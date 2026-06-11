@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AirplaneGamePage } from './AirplaneGamePage';
 import { GamePage } from './GamePage';
 
 const gallerySections = [
@@ -33,29 +34,56 @@ const gallerySections = [
   },
 ];
 
-function HomePage() {
-  const [isStartingGame, setIsStartingGame] = useState(false);
+const games = [
+  {
+    id: '3d-city',
+    badge: '3D WORLD',
+    title: '3D 海滨城市',
+    description: '开车、漫游、探索属于你的海滨小城，支持第一/第三人称切换。',
+    hash: '#/game',
+    buttonText: '进入 3D 世界',
+    loadingTitle: 'CAPYLULU 3D WORLD',
+    loadingDesc: '正在准备海滨城市、车辆和角色场景...',
+    accent: 'city',
+  },
+  {
+    id: 'airplane',
+    badge: 'SKY STRIKE',
+    title: '飞机大战',
+    description: '操控战机穿越星空，自动射击、躲避敌机与弹幕，挑战更高波次。',
+    hash: '#/game/airplane',
+    buttonText: '开始飞机大战',
+    loadingTitle: 'SKY STRIKE',
+    loadingDesc: '正在初始化战机、敌机编队与星空战场...',
+    accent: 'sky',
+  },
+] as const;
 
-  const startGame = () => {
-    if (isStartingGame) return;
-    setIsStartingGame(true);
+type GameEntry = (typeof games)[number];
+
+function HomePage() {
+  const [startingGame, setStartingGame] = useState<GameEntry | null>(null);
+
+  const startGame = (game: GameEntry) => {
+    if (startingGame) return;
+    setStartingGame(game);
 
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
-        window.location.hash = '#/game';
+        window.location.hash = game.hash;
       });
     });
   };
 
   return (
     <main className="capy-home">
-      {isStartingGame ? (
+      {startingGame ? (
         <div className="capy-loading-overlay" role="status" aria-live="polite">
           <div className="capy-loading-card">
             <div className="game-loading-spinner" />
-            <p>CAPYLULU 3D WORLD</p>
+            <p>{startingGame.loadingTitle}</p>
             <h2>正在进入小游戏</h2>
-            <span>正在准备海滨城市、车辆和角色场景...</span>
+            <span>{startingGame.loadingDesc}</span>
           </div>
         </div>
       ) : null}
@@ -67,7 +95,7 @@ function HomePage() {
       <div className="capy-watermelon" />
       <div className="capy-umbrella" />
 
-      <section className="capy-hero" aria-label="3D 小游戏入口">
+      <section className="capy-hero" aria-label="小游戏入口">
         <div className="capy-copy">
           <p className="capy-kicker">CAPYLULU PLAYGROUND</p>
           <h1>
@@ -75,10 +103,7 @@ function HomePage() {
             <span>快乐星球</span>
             <span>准备出发。</span>
           </h1>
-          <p className="capy-subtitle">进入一座海滨小城，开车、漫游、探索属于你的 3D 小游戏。</p>
-          <button className="capy-start-button" type="button" disabled={isStartingGame} onClick={startGame}>
-            <span>{isStartingGame ? '正在进入...' : '点击开始 3D 小游戏'}</span>
-          </button>
+          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市或经典飞机大战。</p>
         </div>
 
         <div className="capy-stage" aria-hidden="true">
@@ -92,9 +117,34 @@ function HomePage() {
         </div>
       </section>
 
+      <section className="capy-games-shell" aria-label="游戏选择">
+        <div className="capy-games-intro">
+          <p className="capy-kicker">Pick Your Game</p>
+          <h2>两款小游戏，随时开玩。</h2>
+        </div>
+
+        <div className="capy-games-grid">
+          {games.map((game) => (
+            <article className={`capy-game-card capy-game-card-${game.accent}`} key={game.id}>
+              <p className="capy-game-badge">{game.badge}</p>
+              <h3>{game.title}</h3>
+              <p>{game.description}</p>
+              <button
+                className="capy-start-button capy-game-start-button"
+                type="button"
+                disabled={Boolean(startingGame)}
+                onClick={() => startGame(game)}
+              >
+                <span>{startingGame?.id === game.id ? '正在进入...' : game.buttonText}</span>
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <div className="capy-marquee" aria-hidden="true">
-        <span>CAPYLULU · 3D GAME · BEACH CITY · DRIVE · EXPLORE · </span>
-        <span>CAPYLULU · 3D GAME · BEACH CITY · DRIVE · EXPLORE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · BEACH CITY · DRIVE · EXPLORE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · BEACH CITY · DRIVE · EXPLORE · </span>
       </div>
 
       <section className="capy-gallery-shell" aria-label="素材图片展示">
@@ -133,7 +183,9 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  return route === '#/game' ? <GamePage /> : <HomePage />;
+  if (route === '#/game') return <GamePage />;
+  if (route === '#/game/airplane') return <AirplaneGamePage />;
+  return <HomePage />;
 }
 
 export { App };
