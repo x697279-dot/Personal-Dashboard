@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AirplaneGamePage } from './AirplaneGamePage';
 import { GamePage } from './GamePage';
+import { PlatformerGamePage } from './PlatformerGamePage';
 
 const gallerySections = [
   {
@@ -57,6 +58,17 @@ const games = [
     loadingDesc: '正在初始化战机、敌机编队与星空战场...',
     accent: 'sky',
   },
+  {
+    id: 'platformer',
+    badge: 'COW QUEST',
+    title: '奶牛闯关',
+    description: '扮演奶牛穿越蘑菇王国，顶砖块、吃道具、踩怪兽，抵达旗杆拯救公主塔德斯图尔。',
+    hash: '#/game/platformer',
+    buttonText: '开始奶牛闯关',
+    loadingTitle: 'COW QUEST',
+    loadingDesc: '正在搭建蘑菇王国、砖块与问号箱...',
+    accent: 'meadow',
+  },
 ] as const;
 
 type GameEntry = (typeof games)[number];
@@ -103,7 +115,7 @@ function HomePage() {
             <span>快乐星球</span>
             <span>准备出发。</span>
           </h1>
-          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市或经典飞机大战。</p>
+          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战或奶牛闯关。</p>
         </div>
 
         <div className="capy-stage" aria-hidden="true">
@@ -120,7 +132,7 @@ function HomePage() {
       <section className="capy-games-shell" aria-label="游戏选择">
         <div className="capy-games-intro">
           <p className="capy-kicker">Pick Your Game</p>
-          <h2>两款小游戏，随时开玩。</h2>
+          <h2>三款小游戏，随时开玩。</h2>
         </div>
 
         <div className="capy-games-grid">
@@ -143,8 +155,8 @@ function HomePage() {
       </section>
 
       <div className="capy-marquee" aria-hidden="true">
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · BEACH CITY · DRIVE · EXPLORE · </span>
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · BEACH CITY · DRIVE · EXPLORE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · BEACH CITY · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · BEACH CITY · DRIVE · </span>
       </div>
 
       <section className="capy-gallery-shell" aria-label="素材图片展示">
@@ -185,6 +197,7 @@ function App() {
 
   if (route === '#/game') return <GamePage />;
   if (route === '#/game/airplane') return <AirplaneGamePage />;
+  if (route === '#/game/platformer') return <PlatformerGamePage />;
   return <HomePage />;
 }
 
