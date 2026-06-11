@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   createWastelandThreeGame,
   type SkillId,
@@ -9,6 +9,7 @@ import {
 } from './wasteland/createWastelandThreeGame';
 
 const saveKey = 'wasteland-survivor-save-v1';
+const autoFireKey = 'wasteland-auto-fireball-v1';
 
 const defaultRunResult: WastelandRunResult = {
   bestKills: 0,
@@ -19,7 +20,7 @@ const defaultRunResult: WastelandRunResult = {
 const docModules = [
   ['地图探索', 'Three.js 大世界俯视角废土城市（500×500），使用 public/generated_assets 切图（地块/精灵/摆件/特效），28 个探索点、虚拟摇杆与小地图。'],
   ['状态机', 'playing、levelup、gameover、victory 四个主状态；升级时暂停物理世界，选择后恢复。'],
-  ['技能系统', '主动技能：火球、激光、导弹、雷电链、无人机；被动技能：攻击力、攻速、暴击率、移动速度、生命值。'],
+  ['技能系统', '火球默认自动释放（左下可开关）；右侧每个技能键独立点击释放；H5 左下摇杆移动，Web/H5 均可用 1~5 快捷键。'],
   ['技能融合', '当前支持火球 + 雷电链融合为传说技能“雷火球”，后续可继续扩展冰火、导弹集束、激光折射等融合。'],
   ['怪物系统', '普通怪参考 small mutant creature：绿色毒性变异、cute but dangerous、top down enemy、cartoon style。'],
   ['Boss系统', '红色重甲机甲 Boss，蒸汽引擎设计、多武器、导弹发射器、高细节手游 Boss 方向。'],
@@ -49,6 +50,22 @@ const skillNames: Record<SkillId, string> = {
   armor: '护甲',
   thunderFireball: '雷火球',
 };
+
+const CASTABLE_SKILLS: SkillId[] = ['fireball', 'laser', 'missile', 'lightning', 'thunderFireball'];
+
+function loadAutoFireball(defaultValue: boolean) {
+  try {
+    const raw = window.localStorage.getItem(autoFireKey);
+    if (raw === null) return defaultValue;
+    return raw === 'true';
+  } catch {
+    return defaultValue;
+  }
+}
+
+function saveAutoFireball(enabled: boolean) {
+  window.localStorage.setItem(autoFireKey, String(enabled));
+}
 
 function loadSave(): WastelandRunResult {
   try {
@@ -82,6 +99,8 @@ function createInitialHud(): WastelandHudState {
     status: 'playing',
     bossHp: 0,
     bossMaxHp: 0,
+    bossX: 0,
+    bossZ: 0,
     skills: {
       fireball: 1,
       laser: 0,
@@ -104,6 +123,8 @@ function createInitialHud(): WastelandHudState {
     discoveredPois: 1,
     totalPois: 28,
     latestDiscovery: '',
+    skillCooldowns: {},
+    autoFireball: true,
   };
 }
 
@@ -166,6 +187,22 @@ function WastelandMinimap({ hud }: { hud: WastelandHudState }) {
       ctx.fill();
     });
 
+    if (hud.bossMaxHp > 0) {
+      const bossPx = size / 2 + hud.bossX * scale;
+      const bossPz = size / 2 + hud.bossZ * scale;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.28)';
+      ctx.arc(bossPx, bossPz, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = '#ef4444';
+      ctx.strokeStyle = '#fff1f2';
+      ctx.lineWidth = 1.5;
+      ctx.arc(bossPx, bossPz, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
     const playerPx = size / 2 + hud.mapX * scale;
     const playerPz = size / 2 + hud.mapZ * scale;
     ctx.beginPath();
@@ -182,7 +219,7 @@ function WastelandMinimap({ hud }: { hud: WastelandHudState }) {
     ctx.beginPath();
     ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
     ctx.stroke();
-  }, [hud.mapX, hud.mapZ, hud.pois, hud.worldSize]);
+  }, [hud.mapX, hud.mapZ, hud.bossX, hud.bossZ, hud.bossMaxHp, hud.pois, hud.worldSize]);
 
   return (
     <div className="wasteland-minimap" aria-label="小地图">
@@ -191,6 +228,148 @@ function WastelandMinimap({ hud }: { hud: WastelandHudState }) {
         探索 {hud.discoveredPois}/{hud.totalPois}
       </span>
     </div>
+  );
+}
+
+function WastelandBossPointer({ hud }: { hud: WastelandHudState }) {
+  if (hud.bossMaxHp <= 0) return null;
+
+  const dx = hud.bossX - hud.mapX;
+  const dz = hud.bossZ - hud.mapZ;
+  const distance = Math.hypot(dx, dz);
+  if (distance < 36) return null;
+
+  const angleDeg = (Math.atan2(-dz, dx) * 180) / Math.PI;
+
+  return (
+    <div className="wasteland-boss-pointer" aria-live="polite">
+      <div
+        className="wasteland-boss-pointer-badge"
+        style={{ '--boss-angle': `${angleDeg}deg` } as CSSProperties}
+      >
+        <span className="wasteland-boss-pointer-arrow" aria-hidden />
+        <strong>机甲 Boss</strong>
+        <em>{Math.round(distance)}m</em>
+      </div>
+    </div>
+  );
+}
+
+function WastelandSkillPadButton({
+  skillId,
+  cooldown,
+  variant,
+  slotIndex,
+  badge,
+  ready,
+  onActivate,
+}: {
+  skillId: SkillId;
+  cooldown?: { remaining: number; total: number };
+  variant: 'primary' | 'secondary';
+  slotIndex?: number;
+  badge?: string;
+  ready: boolean;
+  onActivate: () => void;
+}) {
+  const remaining = cooldown?.remaining ?? 0;
+  const total = cooldown?.total ?? 1;
+  const cdPct = total > 0 ? remaining / total : 0;
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!ready) return;
+    onActivate();
+  };
+
+  return (
+    <button
+      type="button"
+      className={[
+        'wasteland-skill-pad-btn',
+        `wasteland-skill-pad-btn--${variant}`,
+        slotIndex !== undefined ? `wasteland-skill-pad-btn--slot-${slotIndex}` : '',
+        `wasteland-skill-pad-icon--${skillId}`,
+        !ready ? 'wasteland-skill-pad-btn--cooldown' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      disabled={!ready}
+      onPointerDown={handlePointerDown}
+      onContextMenu={(event) => event.preventDefault()}
+      aria-label={`释放${skillNames[skillId]}`}
+      style={{ '--cd-pct': cdPct } as CSSProperties}
+    >
+      <span className="wasteland-skill-pad-fill" aria-hidden />
+      <span className="wasteland-skill-pad-glyph" aria-hidden />
+      {badge ? <span className="wasteland-skill-pad-num">{badge}</span> : null}
+      {remaining > 0 ? <em className="wasteland-skill-pad-cd">{remaining.toFixed(1)}</em> : null}
+    </button>
+  );
+}
+
+function WastelandSkillControls({
+  hud,
+  autoFireball,
+  onToggleAutoFireball,
+  onCast,
+}: {
+  hud: WastelandHudState;
+  autoFireball: boolean;
+  onToggleAutoFireball: (enabled: boolean) => void;
+  onCast: (skillId: SkillId) => void;
+}) {
+  const activeSkills = CASTABLE_SKILLS.filter((id) => hud.skills[id] > 0);
+  const secondarySkills = activeSkills.filter((id) => id !== 'fireball');
+
+  const isReady = (skillId: SkillId) => {
+    const remaining = hud.skillCooldowns[skillId]?.remaining ?? 0;
+    return remaining <= 0 && hud.status === 'playing';
+  };
+
+  return (
+    <>
+      <div className="wasteland-skill-names" aria-label="已获技能">
+        {activeSkills.map((id) => (
+          <span key={id}>
+            {skillNames[id]} Lv.{hud.skills[id]}
+          </span>
+        ))}
+        <label className="wasteland-auto-fire-toggle">
+          <input
+            type="checkbox"
+            checked={autoFireball}
+            onChange={(event) => onToggleAutoFireball(event.target.checked)}
+          />
+          <span>自动火球</span>
+        </label>
+      </div>
+
+      <div className="wasteland-skill-pad" aria-label="技能释放">
+        {hud.skills.fireball > 0 ? (
+          <WastelandSkillPadButton
+            skillId="fireball"
+            cooldown={hud.skillCooldowns.fireball}
+            variant="primary"
+            ready={isReady('fireball')}
+            onActivate={() => onCast('fireball')}
+          />
+        ) : null}
+        {secondarySkills.map((id, index) => (
+          <WastelandSkillPadButton
+            key={id}
+            skillId={id}
+            cooldown={hud.skillCooldowns[id]}
+            variant="secondary"
+            slotIndex={index}
+            badge={String(index + 1)}
+            ready={isReady(id)}
+            onActivate={() => onCast(id)}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -214,6 +393,7 @@ function WastelandSurvivorPage() {
   const [hud, setHud] = useState<WastelandHudState>(() => createInitialHud());
   const [upgradeChoices, setUpgradeChoices] = useState<WastelandUpgradeChoice[]>([]);
   const [discoveryToast, setDiscoveryToast] = useState('');
+  const [autoFireball, setAutoFireball] = useState(() => loadAutoFireball(true));
 
   const stopJoystickLoop = () => {
     if (joystickFrameRef.current !== null) {
@@ -304,30 +484,6 @@ function WastelandSurvivorPage() {
     resetJoystick();
   };
 
-  const setDpadInput = (x: number, z: number) => {
-    joystickInputRef.current = { x, z };
-    startJoystickLoop();
-  };
-
-  const dpadRef = useRef<HTMLDivElement>(null);
-
-  const handleDpadPointerDown = (event: ReactPointerEvent<HTMLDivElement>, x: number, z: number) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setDpadInput(x, z);
-  };
-
-  const handleDpadPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    resetJoystick();
-  };
-
-  const blockDpadContextMenu = (event: React.SyntheticEvent) => {
-    event.preventDefault();
-  };
-
   useEffect(() => {
     return () => {
       stopJoystickLoop();
@@ -349,25 +505,6 @@ function WastelandSurvivorPage() {
     const timer = window.setTimeout(() => setDiscoveryToast(''), 2600);
     return () => window.clearTimeout(timer);
   }, [hud.latestDiscovery]);
-
-  useEffect(() => {
-    const dpad = dpadRef.current;
-    if (!dpad || !hasStarted) return;
-
-    const preventDefault = (event: Event) => {
-      event.preventDefault();
-    };
-
-    dpad.addEventListener('contextmenu', preventDefault);
-    dpad.addEventListener('selectstart', preventDefault);
-    dpad.addEventListener('touchstart', preventDefault, { passive: false });
-
-    return () => {
-      dpad.removeEventListener('contextmenu', preventDefault);
-      dpad.removeEventListener('selectstart', preventDefault);
-      dpad.removeEventListener('touchstart', preventDefault);
-    };
-  }, [hasStarted]);
 
   useEffect(() => {
     if (!hasStarted) {
@@ -405,6 +542,10 @@ function WastelandSurvivorPage() {
   }, [hasStarted]);
 
   useEffect(() => {
+    gameRef.current?.setAutoFireball(autoFireball);
+  }, [autoFireball, hasStarted]);
+
+  useEffect(() => {
     const parent = containerRef.current;
     if (!parent || !hasStarted) return;
 
@@ -423,6 +564,7 @@ function WastelandSurvivorPage() {
       saveData,
     );
     gameRef.current = game;
+    game.setAutoFireball(autoFireball);
 
     return () => {
       resetJoystick();
@@ -465,6 +607,16 @@ function WastelandSurvivorPage() {
   const handleChooseUpgrade = (skillId: SkillId) => {
     if (!gameRef.current) return;
     gameRef.current.chooseUpgrade(skillId);
+  };
+
+  const handleCastSkill = (skillId: SkillId) => {
+    gameRef.current?.castSkill(skillId);
+  };
+
+  const handleToggleAutoFireball = (enabled: boolean) => {
+    setAutoFireball(enabled);
+    saveAutoFireball(enabled);
+    gameRef.current?.setAutoFireball(enabled);
   };
 
   const handleResetSave = () => {
@@ -541,6 +693,7 @@ function WastelandSurvivorPage() {
               <>
                 <div ref={containerRef} className="wasteland-three-stage" />
 
+                <WastelandBossPointer hud={hud} />
                 <WastelandMinimap hud={hud} />
                 <button
                   className="wasteland-minimap-home"
@@ -554,7 +707,7 @@ function WastelandSurvivorPage() {
 
                 {discoveryToast ? (
                   <div className="wasteland-discovery-toast" role="status">
-                    发现探索点：{discoveryToast}
+                    {discoveryToast.includes('Boss') ? discoveryToast : `发现探索点：${discoveryToast}`}
                   </div>
                 ) : null}
 
@@ -568,58 +721,6 @@ function WastelandSurvivorPage() {
                   onPointerCancel={handleJoystickPointerUp}
                 >
                   <div ref={joystickKnobRef} className="mobile-joystick-knob" />
-                </div>
-
-                <div
-                  ref={dpadRef}
-                  className="wasteland-dpad"
-                  aria-label="移动方向键"
-                  onContextMenu={blockDpadContextMenu}
-                >
-                  <div
-                    className="wasteland-dpad-btn wasteland-dpad-up"
-                    role="button"
-                    tabIndex={-1}
-                    aria-label="向上"
-                    onContextMenu={blockDpadContextMenu}
-                    onPointerDown={(event) => handleDpadPointerDown(event, 0, -1)}
-                    onPointerUp={handleDpadPointerUp}
-                    onPointerCancel={handleDpadPointerUp}
-                    onPointerLeave={handleDpadPointerUp}
-                  />
-                  <div
-                    className="wasteland-dpad-btn wasteland-dpad-left"
-                    role="button"
-                    tabIndex={-1}
-                    aria-label="向左"
-                    onContextMenu={blockDpadContextMenu}
-                    onPointerDown={(event) => handleDpadPointerDown(event, -1, 0)}
-                    onPointerUp={handleDpadPointerUp}
-                    onPointerCancel={handleDpadPointerUp}
-                    onPointerLeave={handleDpadPointerUp}
-                  />
-                  <div
-                    className="wasteland-dpad-btn wasteland-dpad-right"
-                    role="button"
-                    tabIndex={-1}
-                    aria-label="向右"
-                    onContextMenu={blockDpadContextMenu}
-                    onPointerDown={(event) => handleDpadPointerDown(event, 1, 0)}
-                    onPointerUp={handleDpadPointerUp}
-                    onPointerCancel={handleDpadPointerUp}
-                    onPointerLeave={handleDpadPointerUp}
-                  />
-                  <div
-                    className="wasteland-dpad-btn wasteland-dpad-down"
-                    role="button"
-                    tabIndex={-1}
-                    aria-label="向下"
-                    onContextMenu={blockDpadContextMenu}
-                    onPointerDown={(event) => handleDpadPointerDown(event, 0, 1)}
-                    onPointerUp={handleDpadPointerUp}
-                    onPointerCancel={handleDpadPointerUp}
-                    onPointerLeave={handleDpadPointerUp}
-                  />
                 </div>
 
                 <div className="wasteland-hud">
@@ -649,15 +750,12 @@ function WastelandSurvivorPage() {
                   ) : null}
                 </div>
 
-                <div className="wasteland-skill-strip">
-                  {(Object.entries(hud.skills) as [SkillId, number][])
-                    .filter(([, level]) => level > 0)
-                    .map(([id, level]) => (
-                      <span key={id}>
-                        {skillNames[id]} Lv.{level}
-                      </span>
-                    ))}
-                </div>
+                <WastelandSkillControls
+                  hud={hud}
+                  autoFireball={autoFireball}
+                  onToggleAutoFireball={handleToggleAutoFireball}
+                  onCast={handleCastSkill}
+                />
 
                 {isLoading ? (
                   <div className="game-loading-overlay" role="status" aria-live="polite">

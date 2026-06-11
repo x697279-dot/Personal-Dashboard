@@ -48,6 +48,11 @@ export type WastelandPoiState = {
   discovered: boolean;
 };
 
+export type WastelandSkillCooldown = {
+  remaining: number;
+  total: number;
+};
+
 export type WastelandHudState = {
   hp: number;
   maxHp: number;
@@ -60,7 +65,11 @@ export type WastelandHudState = {
   status: WastelandStatus;
   bossHp: number;
   bossMaxHp: number;
+  bossX: number;
+  bossZ: number;
   skills: Record<SkillId, number>;
+  skillCooldowns: Partial<Record<SkillId, WastelandSkillCooldown>>;
+  autoFireball: boolean;
   mapX: number;
   mapZ: number;
   worldSize: number;
@@ -230,6 +239,8 @@ const hudState: WastelandHudState = {
   status: 'playing',
   bossHp: 0,
   bossMaxHp: 0,
+  bossX: 0,
+  bossZ: 0,
   skills: {
     fireball: 1,
     laser: 0,
@@ -245,6 +256,8 @@ const hudState: WastelandHudState = {
     armor: 0,
     thunderFireball: 0,
   },
+  skillCooldowns: {},
+  autoFireball: true,
   mapX: 0,
   mapZ: 0,
   worldSize: 500,

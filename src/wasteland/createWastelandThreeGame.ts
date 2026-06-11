@@ -22,6 +22,7 @@ export type {
   WastelandOptions,
   WastelandPoiState,
   WastelandRunResult,
+  WastelandSkillCooldown,
   WastelandUpgradeChoice,
 };
 
@@ -30,6 +31,20 @@ export type WastelandGameHandle = {
   restart: () => void;
   chooseUpgrade: (skillId: SkillId) => void;
   setMoveInput: (x: number, z: number) => void;
+  castSkill: (skillId: SkillId) => boolean;
+  castSkillCombo: () => boolean;
+  setAutoFireball: (enabled: boolean) => void;
+};
+
+const CASTABLE_SKILL_IDS: SkillId[] = ['fireball', 'laser', 'missile', 'lightning', 'thunderFireball'];
+const SECONDARY_SKILL_IDS: SkillId[] = ['laser', 'missile', 'lightning', 'thunderFireball'];
+
+const SKILL_HOTKEYS: Partial<Record<SkillId, string>> = {
+  fireball: '1',
+  laser: '2',
+  missile: '3',
+  lightning: '4',
+  thunderFireball: '5',
 };
 
 const WORLD_SIZE = 500;
@@ -653,7 +668,11 @@ export function createWastelandThreeGame(
     status: 'playing',
     bossHp: 0,
     bossMaxHp: 0,
+    bossX: 0,
+    bossZ: 0,
     skills: emptySkills(),
+    skillCooldowns: {},
+    autoFireball: true,
     mapX: 0,
     mapZ: 0,
     worldSize: WORLD_SIZE,
@@ -680,13 +699,10 @@ export function createWastelandThreeGame(
   let bossSpawned = false;
   let invincibleUntil = 0;
 
-  let fireTimer = 0;
-  let laserTimer = 0;
-  let missileTimer = 0;
-  let lightningTimer = 0;
-  let fusionPulseTimer = 0;
   let spawnTimer = 0;
   let bossAttackTimer = 0;
+  let autoFireballEnabled = true;
+  const skillCooldownRemaining: Partial<Record<SkillId, number>> = {};
 
   const keys = new Set<string>();
   const enemies: EnemyEntity[] = [];
@@ -747,6 +763,9 @@ export function createWastelandThreeGame(
   function syncHudMap() {
     hudState.mapX = playerX;
     hudState.mapZ = playerZ;
+    const boss = enemies.find((enemy) => enemy.kind === 'boss');
+    hudState.bossX = boss?.mesh.position.x ?? 0;
+    hudState.bossZ = boss?.mesh.position.z ?? 0;
     hudState.worldSize = WORLD_SIZE;
     hudState.pois = explorationPois.map(({ id, name, x, z, kind, discovered }) => ({
       id,
@@ -760,8 +779,115 @@ export function createWastelandThreeGame(
     hudState.totalPois = explorationPois.length;
   }
 
+  function getSkillLevel(skillId: SkillId) {
+    return hudState.skills[skillId] ?? 0;
+  }
+
+  function getSkillCooldownTotal(skillId: SkillId) {
+    switch (skillId) {
+      case 'fireball':
+        return Math.max(0.18, 0.62 - getSkillLevel('fireball') * 0.05 - getSkillLevel('fireRate') * 0.05);
+      case 'laser':
+        return Math.max(1.1, 3.8 - getSkillLevel('laser') * 0.32 - getSkillLevel('fireRate') * 0.14);
+      case 'missile':
+        return Math.max(0.8, 3.2 - getSkillLevel('missile') * 0.24 - getSkillLevel('fireRate') * 0.12);
+      case 'lightning':
+        return Math.max(0.85, 3 - getSkillLevel('lightning') * 0.22 - getSkillLevel('fireRate') * 0.1);
+      case 'thunderFireball':
+        return 5.2;
+      default:
+        return 0;
+    }
+  }
+
+  function canCastSkill(skillId: SkillId) {
+    if (hudState.status !== 'playing') return false;
+    if (!CASTABLE_SKILL_IDS.includes(skillId)) return false;
+    if (skillId === 'fireball' && getSkillLevel('fireball') <= 0) return false;
+    if (skillId !== 'fireball' && getSkillLevel(skillId) <= 0) return false;
+    return (skillCooldownRemaining[skillId] ?? 0) <= 0;
+  }
+
+  function syncSkillCooldowns() {
+    const nextCooldowns: Partial<Record<SkillId, { remaining: number; total: number }>> = {};
+    for (const skillId of CASTABLE_SKILL_IDS) {
+      if (skillId === 'fireball' ? getSkillLevel('fireball') <= 0 : getSkillLevel(skillId) <= 0) continue;
+      const total = getSkillCooldownTotal(skillId);
+      const remaining = Math.max(0, skillCooldownRemaining[skillId] ?? 0);
+      nextCooldowns[skillId] = { remaining, total };
+    }
+    hudState.skillCooldowns = nextCooldowns;
+  }
+
+  function updateSkillCooldowns(delta: number) {
+    for (const skillId of CASTABLE_SKILL_IDS) {
+      const remaining = skillCooldownRemaining[skillId];
+      if (!remaining || remaining <= 0) continue;
+      skillCooldownRemaining[skillId] = Math.max(0, remaining - delta);
+    }
+  }
+
+  function castSkill(skillId: SkillId) {
+    if (!canCastSkill(skillId)) return false;
+
+    let fired = false;
+    switch (skillId) {
+      case 'fireball':
+        fired = fireAtTarget();
+        break;
+      case 'laser':
+        fired = fireLaser();
+        break;
+      case 'missile':
+        fired = fireMissiles();
+        break;
+      case 'lightning':
+        fired = castLightningChain();
+        break;
+      case 'thunderFireball':
+        fired = releasePulse();
+        break;
+      default:
+        return false;
+    }
+
+    if (!fired) return false;
+
+    skillCooldownRemaining[skillId] = getSkillCooldownTotal(skillId);
+    syncSkillCooldowns();
+    return true;
+  }
+
+  function castSecondarySkills() {
+    let castCount = 0;
+    for (const skillId of SECONDARY_SKILL_IDS) {
+      if (castSkill(skillId)) castCount += 1;
+    }
+    return castCount;
+  }
+
+  function castSkillCombo() {
+    if (hudState.status !== 'playing') return false;
+
+    let fired = false;
+    if (!autoFireballEnabled) {
+      fired = castSkill('fireball') || fired;
+    }
+    fired = castSecondarySkills() > 0 || fired;
+    return fired;
+  }
+
+  function setAutoFireball(enabled: boolean) {
+    autoFireballEnabled = enabled;
+    hudState.autoFireball = enabled;
+    syncSkillCooldowns();
+    pushHud();
+  }
+
   function pushHud() {
+    hudState.autoFireball = autoFireballEnabled;
     syncHudMap();
+    syncSkillCooldowns();
     callbacks.onHudUpdate({
       ...hudState,
       skills: { ...hudState.skills },
@@ -835,6 +961,9 @@ export function createWastelandThreeGame(
     hudState.status = 'playing';
     hudState.bossHp = 0;
     hudState.bossMaxHp = 0;
+    hudState.bossX = 0;
+    hudState.bossZ = 0;
+    hudState.skillCooldowns = {};
     hudState.skills = emptySkills();
     hudState.skills.drone = options.gearLevel >= 2 ? 1 : 0;
 
@@ -843,11 +972,9 @@ export function createWastelandThreeGame(
     bossSpawned = false;
     invincibleUntil = 0;
     pendingChoices = [];
-    fireTimer = 0;
-    laserTimer = 0;
-    missileTimer = 0;
-    lightningTimer = 0;
-    fusionPulseTimer = 0;
+    for (const skillId of CASTABLE_SKILL_IDS) {
+      delete skillCooldownRemaining[skillId];
+    }
     spawnTimer = 0;
     bossAttackTimer = 0;
 
@@ -925,7 +1052,7 @@ export function createWastelandThreeGame(
 
   function fireAtTarget() {
     const target = findNearestEnemy(90);
-    if (!target) return;
+    if (!target) return false;
     const count = hudState.skills.fireball >= 4 ? 2 : 1;
     for (let i = 0; i < count; i += 1) {
       const spread = i === 0 ? 0 : 0.18;
@@ -941,12 +1068,13 @@ export function createWastelandThreeGame(
         34,
       );
     }
+    return true;
   }
 
   function fireMissiles() {
-    if (hudState.skills.missile <= 0) return;
+    if (hudState.skills.missile <= 0) return false;
     const target = findNearestEnemy(100);
-    if (!target) return;
+    if (!target) return false;
     const count = hudState.skills.missile >= 4 ? 2 : 1;
     for (let i = 0; i < count; i += 1) {
       spawnBullet(
@@ -959,12 +1087,13 @@ export function createWastelandThreeGame(
         22,
       );
     }
+    return true;
   }
 
   function fireLaser() {
-    if (hudState.skills.laser <= 0) return;
+    if (hudState.skills.laser <= 0) return false;
     const target = findNearestEnemy(110);
-    if (!target) return;
+    if (!target) return false;
 
     const points = [
       new THREE.Vector3(playerX, 1.5, playerZ),
@@ -989,12 +1118,13 @@ export function createWastelandThreeGame(
       );
       if (distance < 2.8 + hudState.skills.laser * 0.4) damageEnemy(enemy, damage);
     }
+    return true;
   }
 
   function castLightningChain() {
-    if (hudState.skills.lightning <= 0) return;
+    if (hudState.skills.lightning <= 0) return false;
     let current = findNearestEnemy(80);
-    if (!current) return;
+    if (!current) return false;
 
     const chained = new Set<EnemyEntity>();
     let fromX = playerX;
@@ -1029,6 +1159,7 @@ export function createWastelandThreeGame(
         }
       }
     }
+    return true;
   }
 
   function distanceToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number) {
@@ -1102,6 +1233,9 @@ export function createWastelandThreeGame(
     const maxHp = 900 + options.gearLevel * 70;
     hudState.bossMaxHp = maxHp;
     hudState.bossHp = maxHp;
+    hudState.bossX = mesh.position.x;
+    hudState.bossZ = mesh.position.z;
+    hudState.latestDiscovery = '机甲 Boss 已在北方出现，跟随指示器前往';
     enemies.push({
       mesh,
       kind: 'boss',
@@ -1300,12 +1434,14 @@ export function createWastelandThreeGame(
   }
 
   function releasePulse() {
+    if (hudState.skills.thunderFireball <= 0) return false;
     applyAreaDamage(
       playerX,
       playerZ,
       10 + hudState.skills.thunderFireball * 3.5,
       rollDamage(24 + hudState.skills.fireball * 6 + hudState.skills.lightning * 6),
     );
+    return true;
   }
 
   function bossAttack() {
@@ -1332,6 +1468,13 @@ export function createWastelandThreeGame(
 
   function onKeyDown(event: KeyboardEvent) {
     keys.add(event.key.toLowerCase());
+    if (hudState.status !== 'playing') return;
+
+    const hotkeySkill = Object.entries(SKILL_HOTKEYS).find(([, key]) => key === event.key)?.[0] as SkillId | undefined;
+    if (hotkeySkill) {
+      event.preventDefault();
+      castSkill(hotkeySkill);
+    }
   }
 
   function onKeyUp(event: KeyboardEvent) {
@@ -1478,11 +1621,11 @@ export function createWastelandThreeGame(
   function updateCamera() {
     const isLandscapeMobile =
       parent.clientWidth > parent.clientHeight && parent.clientHeight <= 520;
-    const lookAhead = isLandscapeMobile ? 0 : 16;
     const cameraLift = isLandscapeMobile ? 62 : 58;
+    const cameraBack = 26;
     const targetX = playerX;
-    const targetZ = playerZ + lookAhead;
-    camera.position.lerp(new THREE.Vector3(targetX, cameraLift, targetZ + 28), 0.12);
+    const targetZ = playerZ;
+    camera.position.lerp(new THREE.Vector3(targetX, cameraLift, targetZ + cameraBack), 0.12);
     camera.lookAt(targetX, 0, targetZ);
   }
 
@@ -1513,34 +1656,10 @@ export function createWastelandThreeGame(
 
       if (hudState.time > 86 || hudState.kills >= 90) spawnBoss();
 
-      fireTimer += delta;
-      if (fireTimer >= Math.max(0.18, 0.62 - hudState.skills.fireball * 0.05 - hudState.skills.fireRate * 0.05)) {
-        fireTimer = 0;
-        fireAtTarget();
-      }
+      updateSkillCooldowns(delta);
 
-      laserTimer += delta;
-      if (hudState.skills.laser > 0 && laserTimer >= Math.max(1.1, 3.8 - hudState.skills.laser * 0.32 - hudState.skills.fireRate * 0.14)) {
-        laserTimer = 0;
-        fireLaser();
-      }
-
-      missileTimer += delta;
-      if (hudState.skills.missile > 0 && missileTimer >= Math.max(0.8, 3.2 - hudState.skills.missile * 0.24 - hudState.skills.fireRate * 0.12)) {
-        missileTimer = 0;
-        fireMissiles();
-      }
-
-      lightningTimer += delta;
-      if (hudState.skills.lightning > 0 && lightningTimer >= Math.max(0.85, 3 - hudState.skills.lightning * 0.22 - hudState.skills.fireRate * 0.1)) {
-        lightningTimer = 0;
-        castLightningChain();
-      }
-
-      fusionPulseTimer += delta;
-      if (hudState.skills.thunderFireball > 0 && fusionPulseTimer >= 5.2) {
-        fusionPulseTimer = 0;
-        releasePulse();
+      if (autoFireballEnabled && canCastSkill('fireball')) {
+        castSkill('fireball');
       }
 
       bossAttackTimer += delta;
@@ -1608,6 +1727,15 @@ export function createWastelandThreeGame(
     setMoveInput(x: number, z: number) {
       joystickX = x;
       joystickZ = z;
+    },
+    castSkill(skillId: SkillId) {
+      return castSkill(skillId);
+    },
+    castSkillCombo() {
+      return castSkillCombo();
+    },
+    setAutoFireball(enabled: boolean) {
+      setAutoFireball(enabled);
     },
   };
 }
