@@ -873,6 +873,7 @@ h3 {
     linear-gradient(135deg, rgba(255, 99, 199, 0.82), rgba(71, 255, 241, 0.72));
   box-shadow: 0 10px 24px rgba(25, 24, 54, 0.36);
   transform: translate(-50%, -50%);
+  will-change: transform;
 }
 
 .mobile-action-pad {
@@ -1757,6 +1758,13 @@ body:has(.capy-home) {
     #dcfce7;
 }
 
+.capy-game-card-wasteland {
+  background:
+    radial-gradient(circle at 86% 14%, rgba(132, 204, 22, 0.28), transparent 8rem),
+    linear-gradient(145deg, rgba(255, 247, 214, 0.96), rgba(206, 168, 98, 0.9)),
+    #e5d3a3;
+}
+
 .capy-game-badge {
   margin: 0;
   color: #b85d20;
@@ -2278,4 +2286,1262 @@ body:has(.capy-home) {
   .platformer-mobile-controls {
     display: flex;
   }
+}
+
+.wasteland-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(132, 204, 22, 0.18), transparent 22rem),
+    radial-gradient(circle at 84% 20%, rgba(239, 68, 68, 0.2), transparent 24rem),
+    linear-gradient(180deg, #22281e 0%, #0e130d 48%, #070907 100%);
+  color: #fff8df;
+  overflow-x: hidden;
+}
+
+.wasteland-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: center;
+  width: min(1220px, calc(100% - 40px));
+  min-height: 680px;
+  margin: 0 auto;
+  padding: 92px 0 64px;
+}
+
+.wasteland-back-button {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  border: 1px solid rgba(244, 214, 132, 0.42);
+  border-radius: 999px;
+  background: rgba(18, 24, 14, 0.74);
+  color: #fff8df;
+  cursor: pointer;
+  padding: 10px 18px;
+  font-weight: 900;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.wasteland-kicker {
+  margin: 0 0 12px;
+  color: #a3e635;
+  font-size: 0.82rem;
+  font-weight: 1000;
+  letter-spacing: 0.2em;
+}
+
+.wasteland-hero-copy h1 {
+  max-width: 680px;
+  margin: 0 0 18px;
+  font-size: clamp(3.1rem, 8vw, 7.2rem);
+  line-height: 0.86;
+  letter-spacing: -0.075em;
+  text-shadow:
+    0 6px 0 rgba(89, 62, 28, 0.72),
+    0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+.wasteland-hero-copy > p {
+  max-width: 640px;
+  margin: 0 0 24px;
+  color: rgba(255, 248, 223, 0.78);
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+.wasteland-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wasteland-tags span {
+  border: 1px solid rgba(163, 230, 53, 0.34);
+  border-radius: 999px;
+  background: rgba(163, 230, 53, 0.12);
+  color: #ecfccb;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.wasteland-scene {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 4px solid rgba(255, 248, 223, 0.16);
+  border-radius: 34px;
+  background:
+    linear-gradient(180deg, rgba(91, 116, 80, 0.2), transparent 46%),
+    radial-gradient(circle at 64% 62%, rgba(163, 230, 53, 0.22), transparent 8rem),
+    linear-gradient(160deg, #31402f 0%, #121810 58%, #070907 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 28px 90px rgba(0, 0, 0, 0.42);
+}
+
+.wasteland-logo {
+  position: absolute;
+  top: 34px;
+  left: 32px;
+  color: #f6e6b1;
+  font-size: clamp(2rem, 5vw, 4.2rem);
+  font-weight: 1000;
+  letter-spacing: -0.08em;
+  line-height: 0.85;
+  text-shadow:
+    0 5px 0 #6d4d24,
+    0 0 24px rgba(163, 230, 53, 0.18);
+}
+
+.wasteland-road {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: 45%;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 70px, rgba(250, 204, 21, 0.24) 70px 88px),
+    linear-gradient(155deg, transparent 0 24%, rgba(95, 74, 46, 0.72) 24% 100%);
+  clip-path: polygon(16% 100%, 38% 0, 64% 0, 86% 100%);
+  opacity: 0.86;
+}
+
+.wasteland-player {
+  position: absolute;
+  left: 24%;
+  bottom: 23%;
+  width: 74px;
+  height: 108px;
+  border-radius: 44% 44% 38% 38%;
+  background:
+    radial-gradient(circle at 50% 13%, #f6d18c 0 17px, transparent 18px),
+    linear-gradient(90deg, transparent 0 12px, #7dd3fc 12px 25px, transparent 25px 49px, #7dd3fc 49px 62px, transparent 62px),
+    linear-gradient(180deg, #d6e96b 0 42px, #2f7d68 42px 82px, #1f2937 82px 100%);
+  box-shadow: 0 16px 0 rgba(0, 0, 0, 0.22);
+}
+
+.wasteland-player::before {
+  position: absolute;
+  top: -18px;
+  left: -10px;
+  width: 94px;
+  height: 48px;
+  background: #d9f456;
+  clip-path: polygon(0 74%, 24% 8%, 45% 58%, 68% 0, 100% 76%, 68% 54%, 44% 94%, 22% 56%);
+  content: "";
+}
+
+.wasteland-boss {
+  position: absolute;
+  right: 14%;
+  bottom: 18%;
+  width: 150px;
+  height: 138px;
+  border: 6px solid #2d1712;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 48%, #f9d77c 0 22px, transparent 23px),
+    linear-gradient(135deg, #f0522b, #9b2116);
+  box-shadow:
+    0 18px 0 rgba(0, 0, 0, 0.28),
+    0 0 34px rgba(239, 68, 68, 0.34);
+}
+
+.wasteland-boss::before,
+.wasteland-boss::after {
+  position: absolute;
+  bottom: -30px;
+  width: 48px;
+  height: 34px;
+  border-radius: 999px;
+  background: #3b2b22;
+  content: "";
+}
+
+.wasteland-boss::before {
+  left: 18px;
+}
+
+.wasteland-boss::after {
+  right: 18px;
+}
+
+.wasteland-bullet {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #a3e635;
+  box-shadow:
+    0 0 16px #a3e635,
+    0 0 42px rgba(163, 230, 53, 0.82);
+}
+
+.wasteland-bullet-one {
+  right: 42%;
+  bottom: 34%;
+}
+
+.wasteland-bullet-two {
+  right: 36%;
+  bottom: 46%;
+}
+
+.wasteland-bullet-three {
+  right: 30%;
+  bottom: 28%;
+}
+
+.wasteland-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  width: min(1220px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 0 0 80px;
+}
+
+.wasteland-doc-card {
+  border: 1px solid rgba(244, 214, 132, 0.2);
+  border-radius: 26px;
+  background:
+    linear-gradient(145deg, rgba(255, 248, 223, 0.09), rgba(163, 230, 53, 0.04)),
+    rgba(20, 24, 15, 0.82);
+  padding: 24px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.28);
+}
+
+.wasteland-doc-card h2 {
+  margin: 0 0 16px;
+  color: #f9e7b0;
+  font-size: clamp(1.28rem, 2vw, 1.7rem);
+}
+
+.wasteland-doc-card ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+  color: rgba(255, 248, 223, 0.78);
+  line-height: 1.72;
+}
+
+.wasteland-doc-card li::marker {
+  color: #a3e635;
+}
+
+.wasteland-doc-card pre {
+  overflow: auto;
+  margin: 18px 0 0;
+  border: 1px solid rgba(163, 230, 53, 0.24);
+  border-radius: 18px;
+  background: rgba(3, 7, 18, 0.74);
+  padding: 16px;
+}
+
+.wasteland-doc-card code {
+  color: #d9f99d;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 860px) {
+  .wasteland-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding-top: 84px;
+  }
+
+  .wasteland-back-button {
+    left: 0;
+    right: auto;
+  }
+
+  .wasteland-scene {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 560px) {
+  .wasteland-hero,
+  .wasteland-content {
+    width: min(100% - 24px, 1220px);
+  }
+
+  .wasteland-content {
+    grid-template-columns: 1fr;
+  }
+
+  .wasteland-doc-card {
+    padding: 20px;
+  }
+
+  .wasteland-player {
+    left: 16%;
+    transform: scale(0.82);
+  }
+
+  .wasteland-boss {
+    right: 6%;
+    transform: scale(0.78);
+  }
+}
+
+.wasteland-game-shell {
+  min-height: 100vh;
+}
+
+.wasteland-play-section {
+  width: min(1280px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 34px;
+}
+
+.wasteland-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.wasteland-topbar h1 {
+  margin: 0;
+  color: #f9e7b0;
+  font-size: clamp(2rem, 4.8vw, 4.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  text-shadow: 0 5px 0 rgba(87, 58, 28, 0.7);
+}
+
+.wasteland-back-button-static {
+  position: static;
+  flex: 0 0 auto;
+}
+
+.wasteland-game-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.wasteland-side-panel,
+.wasteland-game-card {
+  border: 1px solid rgba(244, 214, 132, 0.2);
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(255, 248, 223, 0.1), rgba(163, 230, 53, 0.05)),
+    rgba(14, 19, 11, 0.86);
+  box-shadow: 0 22px 80px rgba(0, 0, 0, 0.34);
+}
+
+.wasteland-side-panel {
+  align-self: start;
+  padding: 22px;
+}
+
+.wasteland-side-panel h2 {
+  margin: 0 0 16px;
+  color: #f9e7b0;
+  font-size: 1.35rem;
+}
+
+.wasteland-side-panel p {
+  margin: 16px 0;
+  color: rgba(255, 248, 223, 0.72);
+  line-height: 1.7;
+}
+
+.wasteland-side-panel button,
+.wasteland-primary-button,
+.wasteland-result-actions button {
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #a3e635, #65a30d);
+  color: #172018;
+  cursor: pointer;
+  padding: 11px 18px;
+  font-weight: 1000;
+  box-shadow: 0 16px 44px rgba(132, 204, 22, 0.22);
+}
+
+.wasteland-side-panel button {
+  width: 100%;
+  background: rgba(255, 248, 223, 0.1);
+  color: #fff8df;
+  box-shadow: none;
+}
+
+.wasteland-save-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 14px;
+  border: 1px solid rgba(244, 214, 132, 0.16);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 14px;
+}
+
+.wasteland-save-grid span {
+  color: rgba(255, 248, 223, 0.68);
+}
+
+.wasteland-save-grid strong {
+  color: #a3e635;
+}
+
+.wasteland-game-card {
+  position: relative;
+  min-height: min(72vh, 720px);
+  overflow: hidden;
+}
+
+.wasteland-start-panel {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(260px, 0.75fr);
+  gap: clamp(20px, 4vw, 42px);
+  align-items: center;
+  min-height: min(72vh, 720px);
+  padding: clamp(18px, 3vw, 34px);
+}
+
+.wasteland-start-scene {
+  min-height: 420px;
+}
+
+.wasteland-start-panel h2 {
+  margin: 0 0 14px;
+  color: #f9e7b0;
+  font-size: clamp(2rem, 4.5vw, 4.8rem);
+  line-height: 0.92;
+  letter-spacing: -0.065em;
+}
+
+.wasteland-start-panel p:not(.wasteland-kicker) {
+  color: rgba(255, 248, 223, 0.78);
+  line-height: 1.8;
+}
+
+.wasteland-phaser-stage,
+.wasteland-three-stage {
+  width: 100%;
+  height: min(82vh, 920px);
+  min-height: 620px;
+  background: #172018;
+}
+
+.wasteland-phaser-stage canvas,
+.wasteland-three-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.wasteland-three-stage canvas:active {
+  cursor: grabbing;
+}
+
+.wasteland-game-card.wasteland-game-playing {
+  min-height: min(86vh, 960px);
+}
+
+.wasteland-minimap {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 16;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  width: 132px;
+  pointer-events: none;
+}
+
+.wasteland-minimap canvas {
+  display: block;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px rgba(163, 230, 53, 0.35),
+    0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.wasteland-minimap-label {
+  border: 1px solid rgba(163, 230, 53, 0.24);
+  border-radius: 999px;
+  background: rgba(8, 12, 7, 0.72);
+  padding: 4px 10px;
+  color: #d9f99d;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.wasteland-minimap-home {
+  position: absolute;
+  top: 22px;
+  right: 158px;
+  z-index: 17;
+  display: none;
+  border: 1px solid rgba(163, 230, 53, 0.34);
+  border-radius: 999px;
+  background: rgba(8, 12, 7, 0.76);
+  color: #d9f99d;
+  cursor: pointer;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 1000;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+
+.wasteland-minimap-home:active {
+  transform: translateY(1px);
+}
+
+.wasteland-joystick {
+  position: absolute;
+  left: 18px;
+  bottom: 78px;
+  z-index: 16;
+}
+
+.wasteland-dpad {
+  position: absolute;
+  left: 18px;
+  bottom: 78px;
+  z-index: 16;
+  display: none;
+  grid-template-columns: repeat(3, 46px);
+  grid-template-rows: repeat(3, 46px);
+  gap: 5px;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.wasteland-dpad-btn {
+  border: 1px solid rgba(163, 230, 53, 0.38);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.16), transparent 32%),
+    rgba(8, 12, 7, 0.72);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wasteland-dpad-btn::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+}
+
+.wasteland-dpad-up::after {
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 10px solid #d9f99d;
+}
+
+.wasteland-dpad-down::after {
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid #d9f99d;
+}
+
+.wasteland-dpad-left::after {
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 10px solid #d9f99d;
+}
+
+.wasteland-dpad-right::after {
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 10px solid #d9f99d;
+}
+
+.wasteland-dpad-btn:active {
+  background: rgba(163, 230, 53, 0.34);
+  transform: scale(0.96);
+}
+
+.wasteland-dpad-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.wasteland-dpad-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.wasteland-dpad-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.wasteland-dpad-down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.wasteland-discovery-toast {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  z-index: 18;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(163, 230, 53, 0.34);
+  border-radius: 999px;
+  background: rgba(8, 12, 7, 0.82);
+  padding: 10px 18px;
+  color: #d9f99d;
+  font-size: 0.92rem;
+  font-weight: 900;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  animation: wasteland-toast-in 260ms ease;
+}
+
+@keyframes wasteland-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.wasteland-hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 156px;
+  z-index: 15;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(244, 214, 132, 0.24);
+  border-radius: 18px;
+  background: rgba(8, 12, 7, 0.64);
+  padding: 10px 12px;
+  color: #fff8df;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.wasteland-hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: clamp(0.72rem, 1.6vw, 0.9rem);
+  font-weight: 900;
+}
+
+.wasteland-bar {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 248, 223, 0.15);
+}
+
+.wasteland-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ef4444, #facc15);
+  transition: width 120ms ease;
+}
+
+.wasteland-xp-bar i {
+  background: linear-gradient(90deg, #22d3ee, #a3e635);
+}
+
+.wasteland-boss-bar {
+  display: grid;
+  gap: 5px;
+  color: #fecaca;
+  font-size: 0.82rem;
+  font-weight: 1000;
+}
+
+.wasteland-boss-bar .wasteland-bar i {
+  background: linear-gradient(90deg, #7f1d1d, #ef4444);
+}
+
+.wasteland-skill-strip {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 15;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.wasteland-skill-strip span {
+  border: 1px solid rgba(163, 230, 53, 0.24);
+  border-radius: 999px;
+  background: rgba(8, 12, 7, 0.66);
+  color: #ecfccb;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  backdrop-filter: blur(10px);
+}
+
+.wasteland-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(3, 7, 4, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.wasteland-upgrade-card {
+  width: min(640px, 100%);
+  border: 1px solid rgba(244, 214, 132, 0.26);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(163, 230, 53, 0.12), transparent 14rem),
+    linear-gradient(145deg, rgba(31, 41, 25, 0.98), rgba(10, 15, 8, 0.98));
+  padding: clamp(22px, 4vw, 34px);
+  color: #fff8df;
+  text-align: center;
+  box-shadow: 0 28px 100px rgba(0, 0, 0, 0.48);
+}
+
+.wasteland-upgrade-card h2 {
+  margin: 0 0 16px;
+  color: #f9e7b0;
+}
+
+.wasteland-upgrade-card p {
+  color: rgba(255, 248, 223, 0.78);
+}
+
+.wasteland-upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.wasteland-upgrade-grid button {
+  display: grid;
+  gap: 8px;
+  min-height: 144px;
+  border: 1px solid rgba(163, 230, 53, 0.28);
+  border-radius: 20px;
+  background: rgba(163, 230, 53, 0.1);
+  color: #fff8df;
+  cursor: pointer;
+  padding: 16px;
+  text-align: left;
+}
+
+.wasteland-upgrade-grid em {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.16);
+  color: #fde68a;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 1000;
+}
+
+.wasteland-upgrade-grid strong {
+  color: #d9f99d;
+  font-size: 1rem;
+}
+
+.wasteland-upgrade-grid span {
+  color: rgba(255, 248, 223, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.wasteland-result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.wasteland-result-actions button.secondary {
+  background: rgba(255, 248, 223, 0.12);
+  color: #fff8df;
+  box-shadow: none;
+}
+
+.wasteland-doc-compact {
+  padding-top: 26px;
+}
+
+.wasteland-skill-catalog {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.46fr) minmax(0, 1fr);
+  gap: 22px;
+  width: min(1220px, calc(100% - 40px));
+  margin: 0 auto;
+  border: 1px solid rgba(244, 214, 132, 0.2);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(239, 68, 68, 0.12), transparent 18rem),
+    linear-gradient(145deg, rgba(255, 248, 223, 0.09), rgba(163, 230, 53, 0.04)),
+    rgba(20, 24, 15, 0.82);
+  padding: clamp(22px, 4vw, 30px);
+}
+
+.wasteland-skill-catalog h2 {
+  margin: 0 0 10px;
+  color: #f9e7b0;
+}
+
+.wasteland-skill-catalog p:not(.wasteland-kicker) {
+  margin: 0;
+  color: rgba(255, 248, 223, 0.76);
+  line-height: 1.75;
+}
+
+.wasteland-skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.wasteland-skill-tags span {
+  border: 1px solid rgba(163, 230, 53, 0.22);
+  border-radius: 999px;
+  background: rgba(163, 230, 53, 0.1);
+  color: #ecfccb;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.wasteland-doc-compact .wasteland-doc-card p {
+  margin: 0;
+  color: rgba(255, 248, 223, 0.76);
+  line-height: 1.75;
+}
+
+@media (max-width: 980px) {
+  .wasteland-game-layout,
+  .wasteland-start-panel,
+  .wasteland-skill-catalog {
+    grid-template-columns: 1fr;
+  }
+
+  .wasteland-side-panel {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .wasteland-play-section {
+    width: min(100% - 18px, 1280px);
+    padding-top: 18px;
+  }
+
+  .wasteland-hud {
+    right: 14px;
+  }
+
+  .wasteland-minimap {
+    top: auto;
+    right: 12px;
+    bottom: 118px;
+  }
+
+  .wasteland-joystick {
+    left: 12px;
+    bottom: 12px;
+  }
+
+  .wasteland-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wasteland-phaser-stage,
+  .wasteland-game-card {
+    min-height: 620px;
+  }
+
+  .wasteland-start-scene {
+    min-height: 320px;
+  }
+
+  .wasteland-upgrade-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wasteland-hud-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* H5 横屏全屏游玩 */
+body.wasteland-mobile-play {
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+  width: 100%;
+  height: 100dvh;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+body.wasteland-mobile-play .wasteland-shell-playing {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.wasteland-mobile-play .wasteland-play-section {
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+}
+
+body.wasteland-mobile-play .wasteland-topbar {
+  position: absolute;
+  z-index: 40;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px)) 8px
+    calc(12px + env(safe-area-inset-left, 0px));
+  pointer-events: none;
+}
+
+body.wasteland-mobile-play .wasteland-topbar h1,
+body.wasteland-mobile-play .wasteland-topbar .wasteland-kicker {
+  display: none;
+}
+
+body.wasteland-mobile-play .wasteland-back-button-static {
+  display: none;
+}
+
+body.wasteland-mobile-play .wasteland-side-panel {
+  display: none;
+}
+
+body.wasteland-mobile-play .wasteland-game-layout {
+  display: block;
+  height: 100dvh;
+}
+
+body.wasteland-mobile-play .wasteland-game-card {
+  min-height: 100dvh !important;
+  height: 100dvh;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.wasteland-mobile-play .wasteland-three-stage {
+  min-height: 100dvh !important;
+  height: 100dvh !important;
+}
+
+body.wasteland-mobile-play .wasteland-hud {
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  right: auto;
+  width: min(46vw, 340px);
+  max-width: 340px;
+}
+
+@media (orientation: landscape) {
+  body.wasteland-mobile-play .wasteland-hud {
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    left: calc(6px + env(safe-area-inset-left, 0px));
+    width: min(38vw, 280px);
+    max-width: 280px;
+    padding: 5px 8px;
+    gap: 3px;
+    border-radius: 12px;
+  }
+
+  body.wasteland-mobile-play .wasteland-hud-row {
+    font-size: 0.62rem;
+    gap: 6px;
+    line-height: 1.1;
+  }
+
+  body.wasteland-mobile-play .wasteland-bar {
+    height: 4px;
+  }
+
+  body.wasteland-mobile-play .wasteland-boss-bar {
+    gap: 2px;
+    font-size: 0.58rem;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap {
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
+    width: 96px;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap canvas {
+    width: 96px;
+    height: 96px;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap-label {
+    font-size: 0.58rem;
+    padding: 2px 7px;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap-home {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: calc(110px + env(safe-area-inset-right, 0px));
+    padding: 5px 9px;
+    font-size: 0.62rem;
+  }
+
+  body.wasteland-mobile-play .wasteland-topbar {
+    padding: calc(6px + env(safe-area-inset-top, 0px)) calc(8px + env(safe-area-inset-right, 0px)) 4px
+      calc(8px + env(safe-area-inset-left, 0px));
+  }
+
+  body.wasteland-mobile-play .wasteland-skill-strip {
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    left: calc(172px + env(safe-area-inset-left, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
+  }
+
+  body.wasteland-mobile-play .wasteland-skill-strip span {
+    padding: 4px 8px;
+    font-size: 0.62rem;
+  }
+
+  body.wasteland-mobile-play .wasteland-joystick {
+    display: none;
+  }
+
+  body.wasteland-mobile-play .wasteland-dpad {
+    bottom: calc(46px + env(safe-area-inset-bottom, 0px));
+    left: calc(24px + env(safe-area-inset-left, 0px));
+    display: grid;
+  }
+}
+
+body.wasteland-mobile-play .wasteland-minimap {
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  bottom: auto;
+}
+
+body.wasteland-mobile-play .wasteland-minimap-home {
+  display: block;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: calc(150px + env(safe-area-inset-right, 0px));
+}
+
+body.wasteland-mobile-play .wasteland-joystick {
+  display: none;
+}
+
+body.wasteland-mobile-play .wasteland-dpad {
+  left: calc(24px + env(safe-area-inset-left, 0px));
+  bottom: calc(46px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+}
+
+body.wasteland-mobile-play .wasteland-skill-strip {
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+body.wasteland-mobile-play .wasteland-modal {
+  z-index: 90;
+  padding: 8px;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-card {
+  width: min(82vw, 660px);
+  max-height: 92dvh;
+  overflow: auto;
+  border-radius: 18px;
+  padding: 12px;
+  text-align: left;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-card .wasteland-kicker {
+  margin-bottom: 4px;
+  font-size: 0.58rem;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-card h2 {
+  margin: 0 0 8px;
+  font-size: 0.96rem;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-grid button {
+  min-height: 76px;
+  border-radius: 14px;
+  padding: 8px;
+  gap: 4px;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-grid em {
+  padding: 3px 7px;
+  font-size: 0.56rem;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-grid strong {
+  font-size: 0.8rem;
+}
+
+body.wasteland-mobile-play .wasteland-upgrade-grid span {
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+body.wasteland-mobile-play .wasteland-rotate-hint {
+  display: none;
+}
+
+@media (max-width: 980px) and (orientation: portrait) {
+  body.wasteland-mobile-play .wasteland-shell-playing {
+    width: 100dvh;
+    height: 100dvw;
+    min-height: 100dvw;
+    transform: rotate(90deg) translateY(-100%);
+    transform-origin: left top;
+  }
+
+  body.wasteland-mobile-play .wasteland-play-section,
+  body.wasteland-mobile-play .wasteland-game-layout,
+  body.wasteland-mobile-play .wasteland-game-card,
+  body.wasteland-mobile-play .wasteland-three-stage {
+    width: 100dvh;
+    height: 100dvw !important;
+    min-height: 100dvw !important;
+  }
+
+  body.wasteland-mobile-play .wasteland-hud {
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    left: calc(6px + env(safe-area-inset-left, 0px));
+    width: min(38dvh, 280px);
+    max-width: 280px;
+    padding: 5px 8px;
+    gap: 3px;
+    border-radius: 12px;
+  }
+
+  body.wasteland-mobile-play .wasteland-hud-row {
+    font-size: 0.62rem;
+    gap: 6px;
+    line-height: 1.1;
+  }
+
+  body.wasteland-mobile-play .wasteland-bar {
+    height: 4px;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap {
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    right: calc(6px + env(safe-area-inset-right, 0px));
+    width: 96px;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap canvas {
+    width: 96px;
+    height: 96px;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap-label {
+    font-size: 0.58rem;
+    padding: 2px 7px;
+  }
+
+  body.wasteland-mobile-play .wasteland-minimap-home {
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    right: calc(108px + env(safe-area-inset-right, 0px));
+    padding: 5px 9px;
+    font-size: 0.62rem;
+  }
+
+  body.wasteland-mobile-play .wasteland-joystick {
+    display: none;
+  }
+
+  body.wasteland-mobile-play .wasteland-dpad {
+    bottom: calc(46px + env(safe-area-inset-bottom, 0px));
+    left: calc(24px + env(safe-area-inset-left, 0px));
+    display: grid;
+  }
+
+  body.wasteland-mobile-play .wasteland-modal {
+    inset: 0;
+    width: auto;
+    height: auto;
+    transform: none;
+  }
+
+  body.wasteland-mobile-play .wasteland-upgrade-card {
+    width: min(82dvh, 660px);
+    max-height: calc(100dvw - 18px);
+    padding: 10px;
+  }
+
+  body.wasteland-mobile-play .wasteland-upgrade-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  body.wasteland-mobile-play .wasteland-upgrade-grid button {
+    min-height: 70px;
+    grid-template-columns: 1fr;
+  }
+}
+
+.wasteland-rotate-hint {
+  display: none;
 }

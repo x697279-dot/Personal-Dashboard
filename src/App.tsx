@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AirplaneGamePage } from './AirplaneGamePage';
 import { GamePage } from './GamePage';
 import { PlatformerGamePage } from './PlatformerGamePage';
+import { WastelandSurvivorPage } from './WastelandSurvivorPage';
 
 const gallerySections = [
   {
@@ -69,6 +70,17 @@ const games = [
     loadingDesc: '正在搭建蘑菇王国、砖块与问号箱...',
     accent: 'meadow',
   },
+  {
+    id: 'wasteland',
+    badge: 'WASTELAND',
+    title: '废土幸存者',
+    description: '2D TopDown Roguelike 自动射击手游方案：Q版角色、机甲Boss、技能成长、装备养成与地图探索。',
+    hash: '#/game/wasteland',
+    buttonText: '进入废土幸存者',
+    loadingTitle: 'WASTELAND SURVIVOR',
+    loadingDesc: '正在进入废土战场、加载角色与地图切图...',
+    accent: 'wasteland',
+  },
 ] as const;
 
 type GameEntry = (typeof games)[number];
@@ -115,7 +127,7 @@ function HomePage() {
             <span>快乐星球</span>
             <span>准备出发。</span>
           </h1>
-          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战或奶牛闯关。</p>
+          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战、奶牛闯关或废土幸存者方案。</p>
         </div>
 
         <div className="capy-stage" aria-hidden="true">
@@ -132,7 +144,7 @@ function HomePage() {
       <section className="capy-games-shell" aria-label="游戏选择">
         <div className="capy-games-intro">
           <p className="capy-kicker">Pick Your Game</p>
-          <h2>三款小游戏，随时开玩。</h2>
+          <h2>四款小游戏，随时开玩。</h2>
         </div>
 
         <div className="capy-games-grid">
@@ -155,8 +167,8 @@ function HomePage() {
       </section>
 
       <div className="capy-marquee" aria-hidden="true">
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · BEACH CITY · DRIVE · </span>
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · BEACH CITY · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · DRIVE · </span>
       </div>
 
       <section className="capy-gallery-shell" aria-label="素材图片展示">
@@ -198,6 +210,7 @@ function App() {
   if (route === '#/game') return <GamePage />;
   if (route === '#/game/airplane') return <AirplaneGamePage />;
   if (route === '#/game/platformer') return <PlatformerGamePage />;
+  if (route === '#/game/wasteland') return <WastelandSurvivorPage />;
   return <HomePage />;
 }
 
