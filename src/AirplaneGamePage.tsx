@@ -74,31 +74,30 @@ function AirplaneGamePage() {
           <div className="game-eyebrow">CAPYLULU SKY STRIKE</div>
           <h1>飞机大战</h1>
         </div>
-        <div className="airplane-hud-right">
-          <div className="airplane-hud-stats">
-            <div className="airplane-stat">
-              <span>得分</span>
-              <strong>{hud.score}</strong>
-            </div>
-            <div className="airplane-stat">
-              <span>生命</span>
-              <strong>{'❤'.repeat(Math.max(hud.lives, 0)) || '—'}</strong>
-            </div>
-            <div className="airplane-stat">
-              <span>波次</span>
-              <strong>{hud.wave}</strong>
-            </div>
+        <div className="airplane-hud-stats">
+          <div className="airplane-stat">
+            <span>得分</span>
+            <strong>{hud.score}</strong>
           </div>
-          <button
-            className="back-home-button airplane-back-button"
-            type="button"
-            onClick={() => {
-              window.location.hash = '#/';
-            }}
-          >
-            返回主页
-          </button>
+          <div className="airplane-stat">
+            <span>生命</span>
+            <strong>{'❤'.repeat(Math.max(hud.lives, 0)) || '—'}</strong>
+          </div>
+          <div className="airplane-stat">
+            <span>波次</span>
+            <strong>{hud.wave}</strong>
+          </div>
         </div>
+        <button
+          className="back-home-button airplane-back-button"
+          type="button"
+          onClick={() => {
+            window.location.hash = '#/';
+          }}
+        >
+          <span className="airplane-back-button-full">返回主页</span>
+          <span className="airplane-back-button-short">返回</span>
+        </button>
       </div>
 
       <div className="control-card airplane-control-card">
