@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AirplaneGamePage } from './AirplaneGamePage';
 import { GamePage } from './GamePage';
+import { MinesweeperGamePage } from './MinesweeperGamePage';
 import { PlatformerGamePage } from './PlatformerGamePage';
 import { WastelandSurvivorPage } from './WastelandSurvivorPage';
 
@@ -81,6 +82,17 @@ const games = [
     loadingDesc: '正在进入废土战场、加载角色与地图切图...',
     accent: 'wasteland',
   },
+  {
+    id: 'minesweeper',
+    badge: 'MINEFIELD',
+    title: '扫雷挑战',
+    description: '简单 / 困难 / 超难三关，翻格子、插旗排雷，第一下永远安全。',
+    hash: '#/game/minesweeper',
+    buttonText: '开始扫雷',
+    loadingTitle: 'MINEFIELD',
+    loadingDesc: '正在铺设雷区、准备三关挑战...',
+    accent: 'mines',
+  },
 ] as const;
 
 type GameEntry = (typeof games)[number];
@@ -127,7 +139,7 @@ function HomePage() {
             <span>快乐星球</span>
             <span>准备出发。</span>
           </h1>
-          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战、奶牛闯关或废土幸存者方案。</p>
+          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战、奶牛闯关、废土幸存者或扫雷挑战。</p>
         </div>
 
         <div className="capy-stage" aria-hidden="true">
@@ -144,7 +156,7 @@ function HomePage() {
       <section className="capy-games-shell" aria-label="游戏选择">
         <div className="capy-games-intro">
           <p className="capy-kicker">Pick Your Game</p>
-          <h2>四款小游戏，随时开玩。</h2>
+          <h2>五款小游戏，随时开玩。</h2>
         </div>
 
         <div className="capy-games-grid">
@@ -167,8 +179,8 @@ function HomePage() {
       </section>
 
       <div className="capy-marquee" aria-hidden="true">
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · DRIVE · </span>
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · DRIVE · </span>
       </div>
 
       <section className="capy-gallery-shell" aria-label="素材图片展示">
@@ -211,6 +223,7 @@ function App() {
   if (route === '#/game/airplane') return <AirplaneGamePage />;
   if (route === '#/game/platformer') return <PlatformerGamePage />;
   if (route === '#/game/wasteland') return <WastelandSurvivorPage />;
+  if (route === '#/game/minesweeper') return <MinesweeperGamePage />;
   return <HomePage />;
 }
 

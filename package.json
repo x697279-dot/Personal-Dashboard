@@ -9,11 +9,11 @@
     "phaser": "^4.1.0",
     "react": "latest",
     "react-dom": "latest",
-    "three": "latest",
+    "three": "latest",         
     "typescript": "latest",
     "vite": "latest"
   },
-  "devDependencies": {
+  "devDependencies": {    
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/three": "latest"
