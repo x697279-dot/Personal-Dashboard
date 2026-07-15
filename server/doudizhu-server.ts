@@ -33,6 +33,8 @@ type Room = {
   hostSeat: Seat;
   players: (Player | null)[];
   game: GameState | null;
+  /** 申请换位：目标座位 -> 发起者座位 */
+  pendingSwaps: Partial<Record<Seat, Seat>>;
 };
 
 const rooms = new Map<string, Room>();
@@ -82,7 +84,7 @@ function broadcastState(room: Room) {
 function getRoom(roomId: string): Room {
   let room = rooms.get(roomId);
   if (!room) {
-    room = { id: roomId, hostSeat: 0, players: [null, null, null], game: null };
+    room = { id: roomId, hostSeat: 0, players: [null, null, null], game: null, pendingSwaps: {} };
     rooms.set(roomId, room);
   }
   return room;
@@ -93,6 +95,39 @@ function findSeatByWs(room: Room, ws: WebSocket): Seat | null {
     if (room.players[i]?.ws === ws) return i as Seat;
   }
   return null;
+}
+
+function movePlayer(room: Room, from: Seat, to: Seat) {
+  const player = room.players[from];
+  if (!player) return;
+  room.players[to] = player;
+  room.players[from] = null;
+  player.seat = to;
+  player.ready = false;
+  if (room.hostSeat === from) room.hostSeat = to;
+}
+
+function swapPlayers(room: Room, a: Seat, b: Seat) {
+  const pa = room.players[a];
+  const pb = room.players[b];
+  room.players[a] = pb;
+  room.players[b] = pa;
+  if (pa) {
+    pa.seat = b;
+    pa.ready = false;
+  }
+  if (pb) {
+    pb.seat = a;
+    pb.ready = false;
+  }
+  if (room.hostSeat === a) room.hostSeat = b;
+  else if (room.hostSeat === b) room.hostSeat = a;
+}
+
+function notifySeat(room: Room, seat: Seat) {
+  const p = room.players[seat];
+  if (!p?.ws) return;
+  send(p.ws, { type: 'welcome', seat, roomId: room.id, isHost: seat === room.hostSeat });
 }
 
 function advanceRedeal(room: Room) {
@@ -177,6 +212,84 @@ wss.on('connection', (ws) => {
       const p = room.players[seat];
       if (p) p.ready = msg.ready;
       broadcastLobby(room);
+      return;
+    }
+
+    if (msg.type === 'changeSeat') {
+      if (room.game) {
+        send(ws, { type: 'error', message: '对局中无法换座' });
+        return;
+      }
+      const target = msg.targetSeat;
+      if (target === seat || target < 0 || target > 2) {
+        send(ws, { type: 'error', message: '无效座位' });
+        return;
+      }
+      if (room.players[target]) {
+        send(ws, { type: 'error', message: '座位已被占用，请申请换位' });
+        return;
+      }
+      movePlayer(room, seat, target);
+      delete room.pendingSwaps[seat];
+      delete room.pendingSwaps[target];
+      for (const [t, from] of Object.entries(room.pendingSwaps)) {
+        if (Number(from) === seat) delete room.pendingSwaps[Number(t) as Seat];
+      }
+      notifySeat(room, target);
+      broadcastLobby(room);
+      send(ws, { type: 'info', message: `已换到座位 ${target + 1}` });
+      return;
+    }
+
+    if (msg.type === 'requestSwap') {
+      if (room.game) {
+        send(ws, { type: 'error', message: '对局中无法换座' });
+        return;
+      }
+      const target = msg.targetSeat;
+      if (target === seat || target < 0 || target > 2) {
+        send(ws, { type: 'error', message: '无效座位' });
+        return;
+      }
+      const targetPlayer = room.players[target];
+      if (!targetPlayer?.ws || targetPlayer.ws.readyState !== targetPlayer.ws.OPEN) {
+        send(ws, { type: 'error', message: '对方不在线，无法申请换位' });
+        return;
+      }
+      room.pendingSwaps[target] = seat;
+      const fromName = room.players[seat]?.name || '玩家';
+      send(targetPlayer.ws, { type: 'swapRequest', fromSeat: seat, fromName });
+      send(ws, { type: 'info', message: `已向座位 ${target + 1} 申请换位，等待对方同意` });
+      return;
+    }
+
+    if (msg.type === 'respondSwap') {
+      if (room.game) {
+        send(ws, { type: 'error', message: '对局中无法换座' });
+        return;
+      }
+      const from = msg.fromSeat;
+      if (room.pendingSwaps[seat] !== from) {
+        send(ws, { type: 'error', message: '没有待处理的换位申请' });
+        return;
+      }
+      delete room.pendingSwaps[seat];
+      const fromPlayer = room.players[from];
+      if (!msg.accept) {
+        send(fromPlayer?.ws ?? null, { type: 'info', message: `座位 ${seat + 1} 拒绝了换位` });
+        send(ws, { type: 'info', message: '已拒绝换位申请' });
+        return;
+      }
+      if (!fromPlayer || !room.players[seat]) {
+        send(ws, { type: 'error', message: '换位失败，座位状态已变化' });
+        return;
+      }
+      swapPlayers(room, from, seat);
+      notifySeat(room, from);
+      notifySeat(room, seat);
+      broadcastLobby(room);
+      send(room.players[from]?.ws ?? null, { type: 'info', message: '换位成功' });
+      send(room.players[seat]?.ws ?? null, { type: 'info', message: '换位成功' });
       return;
     }
 

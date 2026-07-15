@@ -12,11 +12,15 @@ export type ServerToClient =
   | { type: 'scores'; scores: ScoreDelta }
   | { type: 'error'; message: string }
   | { type: 'chat'; seat: Seat; text: string }
-  | { type: 'info'; message: string };
+  | { type: 'info'; message: string }
+  | { type: 'swapRequest'; fromSeat: Seat; fromName: string };
 
 export type ClientToServer =
   | { type: 'join'; roomId: string; name: string }
   | { type: 'ready'; ready: boolean }
+  | { type: 'changeSeat'; targetSeat: Seat }
+  | { type: 'requestSwap'; targetSeat: Seat }
+  | { type: 'respondSwap'; fromSeat: Seat; accept: boolean }
   | { type: 'start' }
   | { type: 'bid'; bid: 0 | 1 | 2 | 3 }
   | { type: 'play'; cardIds: string[] }

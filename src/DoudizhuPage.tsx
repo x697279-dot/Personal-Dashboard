@@ -441,16 +441,20 @@ function DoudizhuPage() {
   // lan / online
   const pageIsHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
   const defaultOnlineHost = import.meta.env.VITE_DOUDIZHU_WS_HOST ?? '';
-  const [lanHost, setLanHost] = useState(defaultOnlineHost || (pageIsHttps ? '' : '127.0.0.1'));
-  const [lanPort, setLanPort] = useState(pageIsHttps ? '443' : String(DOUDIZHU_DEFAULT_PORT));
+  const fixedPort = pageIsHttps ? '443' : String(DOUDIZHU_DEFAULT_PORT);
+  const [lanHost, setLanHost] = useState(defaultOnlineHost || (pageIsHttps ? 'xjy-ws.onrender.com' : '127.0.0.1'));
   const [lanName, setLanName] = useState('玩家');
   const [lanRoom, setLanRoom] = useState('room1');
   const [lanView, setLanView] = useState<ClientView | null>(null);
   const [lanNames, setLanNames] = useState<[string, string, string]>(['', '', '']);
   const [lanLobby, setLanLobby] = useState<Array<{ seat: Seat; name: string; ready: boolean; connected: boolean }>>([]);
   const [lanIsHost, setLanIsHost] = useState(false);
+  const [lanHostSeat, setLanHostSeat] = useState<Seat | null>(null);
   const [lanSeat, setLanSeat] = useState<Seat | null>(null);
   const [lanMsg, setLanMsg] = useState('');
+  const [lanConnectStep, setLanConnectStep] = useState<'idle' | 'connecting' | 'joining' | 'joined' | 'error'>('idle');
+  const [lanConnectDetail, setLanConnectDetail] = useState('');
+  const [swapAsk, setSwapAsk] = useState<{ fromSeat: Seat; fromName: string } | null>(null);
   const socketRef = useRef<ReturnType<typeof connectDoudizhu> | null>(null);
 
   const soloView = useMemo(() => (soloState ? toClientView(soloState, 0) : null), [soloState]);
@@ -533,54 +537,90 @@ function DoudizhuPage() {
   const connectLan = () => {
     const host = lanHost.trim();
     if (!host) {
-      setLanMsg(pageIsHttps ? '请填写公网联机地址（如 xxx.onrender.com）' : '请填写服务器地址');
+      setLanConnectStep('error');
+      setLanConnectDetail('请填写服务器地址，例如 xjy-ws.onrender.com');
+      setLanMsg('请填写服务器地址');
       return;
     }
     if (pageIsHttps && looksLikePrivateHost(host)) {
-      setLanMsg('HTTPS 站点无法直连局域网 IP。请部署联机服务到公网（见下方说明），或改用本机 http 开发页联机。');
+      setLanConnectStep('error');
+      setLanConnectDetail('HTTPS 站点无法直连局域网 IP，请填写公网域名（如 xjy-ws.onrender.com）');
+      setLanMsg('无法使用局域网 IP');
       return;
     }
 
     socketRef.current?.close();
-    setLanMsg('连接中...');
     setLanView(null);
     setLanLobby([]);
+    setLanConnectStep('connecting');
+    setLanConnectDetail(`正在连接 wss://${host.replace(/^https?:\/\//, '')}:${fixedPort} …`);
+    setLanMsg('连接中…');
+
     try {
-      const sock = connectDoudizhu(host, Number(lanPort) || (pageIsHttps ? 443 : DOUDIZHU_DEFAULT_PORT), {
+      const sock = connectDoudizhu(host, Number(fixedPort), {
         onOpen: () => {
-          setLanMsg('已连接，正在加入房间...');
+          setLanConnectStep('joining');
+          setLanConnectDetail('WebSocket 已连通，正在加入房间…');
+          setLanMsg('已连接，正在加入房间…');
           sock.send({ type: 'join', roomId: lanRoom.trim() || 'room1', name: lanName.trim() || '玩家' });
         },
-        onClose: () => setLanMsg('连接已断开'),
-        onError: () =>
-          setLanMsg(
+        onClose: () => {
+          setLanConnectStep((prev) => (prev === 'joined' ? prev : 'error'));
+          setLanConnectDetail((prev) =>
+            prev.includes('已入座') ? prev : '连接已断开。若服务刚唤醒，请等待约 30 秒后重试。',
+          );
+          setLanMsg('连接已断开');
+        },
+        onError: () => {
+          setLanConnectStep('error');
+          setLanConnectDetail(
             pageIsHttps
-              ? '连接失败：请确认公网联机服务已启动且支持 WSS'
-              : '连接失败，请确认已启动 npm run doudizhu-server',
-          ),
+              ? '连接失败：请确认 Render 服务为 Live，地址填写正确（不要加 https://）'
+              : '连接失败：请确认已启动 npm run doudizhu-server',
+          );
+          setLanMsg('连接失败');
+        },
         onMessage: (msg: ServerToClient) => {
           if (msg.type === 'welcome') {
             setLanSeat(msg.seat);
             setLanIsHost(msg.isHost);
-            setScreen('lan');
+            if (msg.isHost) setLanHostSeat(msg.seat);
+            setLanConnectStep('joined');
+            setLanConnectDetail(`已入座 ${msg.seat + 1}${msg.isHost ? '（房主）' : ''}，进入大厅`);
             setLanMsg(`已入座 ${msg.seat + 1}`);
+            setScreen('lan');
           } else if (msg.type === 'lobby') {
             setLanLobby(msg.players);
+            setLanHostSeat(msg.hostSeat);
+            setLanSeat((my) => {
+              if (my !== null) setLanIsHost(my === msg.hostSeat);
+              return my;
+            });
+          } else if (msg.type === 'swapRequest') {
+            setSwapAsk({ fromSeat: msg.fromSeat, fromName: msg.fromName });
+            setLanMsg(`${msg.fromName} 申请与你换位`);
           } else if (msg.type === 'state') {
             setLanView(msg.view);
             setLanNames(msg.names);
             setSelectedIds([]);
             setHintTip('');
+            setSwapAsk(null);
           } else if (msg.type === 'error') {
             setLanMsg(msg.message);
+            setLanConnectStep((step) => (step === 'joined' || step === 'idle' ? step : 'error'));
+            setLanConnectDetail(msg.message);
           } else if (msg.type === 'info') {
             setLanMsg(msg.message);
+            setLanConnectDetail(msg.message);
           }
         },
       });
       socketRef.current = sock;
     } catch (err) {
-      setLanMsg(err instanceof Error ? err.message : '无法连接');
+      setLanConnectStep('error');
+      const text = err instanceof Error ? err.message : '无法连接';
+      setLanConnectDetail(text);
+      setLanMsg(text);
     }
   };
 
@@ -680,18 +720,6 @@ function DoudizhuPage() {
         </button>
         <section className="ddz-setup">
           <h2>联机对战</h2>
-          {pageIsHttps ? (
-            <p>
-              你正在 HTTPS 站点（如 Vercel）。请把联机服务部署到公网（Render / Railway 等），然后填写域名；页面会自动使用{' '}
-              <code>wss://</code>。局域网 IP 在此站不可用。
-            </p>
-          ) : (
-            <p>
-              局域网：房主运行 <code>npm run doudizhu-server</code>，填写局域网 IP、端口 3789。
-              <br />
-              线上：填写已部署的联机服务域名，端口一般填 443。
-            </p>
-          )}
           <label>
             昵称
             <input value={lanName} onChange={(e) => setLanName(e.target.value)} maxLength={12} />
@@ -705,21 +733,54 @@ function DoudizhuPage() {
             <input
               value={lanHost}
               onChange={(e) => setLanHost(e.target.value)}
-              placeholder={pageIsHttps ? 'your-app.onrender.com' : '192.168.1.8'}
+              placeholder={pageIsHttps ? 'xjy-ws.onrender.com' : '192.168.1.8'}
             />
           </label>
           <label>
             端口
-            <input
-              value={lanPort}
-              onChange={(e) => setLanPort(e.target.value)}
-              placeholder={pageIsHttps ? '443' : String(DOUDIZHU_DEFAULT_PORT)}
-            />
+            <input className="is-locked" value={fixedPort} readOnly disabled title="端口已固定" />
           </label>
-          <button type="button" className="ddz-primary" onClick={connectLan}>
-            连接并加入
+          <button
+            type="button"
+            className="ddz-primary"
+            onClick={connectLan}
+            disabled={lanConnectStep === 'connecting' || lanConnectStep === 'joining'}
+          >
+            {lanConnectStep === 'connecting' || lanConnectStep === 'joining' ? '连接中…' : '连接并加入'}
           </button>
-          {lanMsg ? <p className="ddz-lan-msg">{lanMsg}</p> : null}
+          {lanConnectStep !== 'idle' ? (
+            <div className={`ddz-connect-status is-${lanConnectStep}`}>
+              <ol className="ddz-connect-steps">
+                <li className={lanConnectStep !== 'idle' ? 'is-done' : ''}>填写服务器并开始连接</li>
+                <li
+                  className={
+                    lanConnectStep === 'connecting'
+                      ? 'is-active'
+                      : ['joining', 'joined'].includes(lanConnectStep)
+                        ? 'is-done'
+                        : lanConnectStep === 'error'
+                          ? 'is-fail'
+                          : ''
+                  }
+                >
+                  建立 WebSocket（端口 {fixedPort}）
+                </li>
+                <li
+                  className={
+                    lanConnectStep === 'joining'
+                      ? 'is-active'
+                      : lanConnectStep === 'joined'
+                        ? 'is-done'
+                        : ''
+                  }
+                >
+                  加入房间并分配座位
+                </li>
+                <li className={lanConnectStep === 'joined' ? 'is-done' : ''}>进入房间大厅</li>
+              </ol>
+              {lanConnectDetail ? <p className="ddz-connect-detail">{lanConnectDetail}</p> : null}
+            </div>
+          ) : null}
         </section>
       </div>
     );
@@ -776,7 +837,18 @@ function DoudizhuPage() {
   }
 
   if (screen === 'lan') {
-    const allReady = lanLobby.length === 3 && lanLobby.every((p) => p.ready && p.connected);
+    const seats = ([0, 1, 2] as Seat[]).map((seat) => {
+      const fromServer = lanLobby.find((p) => p.seat === seat);
+      return (
+        fromServer ?? {
+          seat,
+          name: '',
+          ready: false,
+          connected: false,
+        }
+      );
+    });
+    const allReady = seats.every((p) => p.ready && p.connected && p.name);
     return (
       <div className="ddz-page ddz-playing">
         <div className="ddz-topbar">
@@ -785,34 +857,118 @@ function DoudizhuPage() {
             className="ddz-back-inline"
             onClick={() => {
               socketRef.current?.close();
+              setLanConnectStep('idle');
+              setLanConnectDetail('');
               setScreen('lan-setup');
             }}
           >
             断开
           </button>
-          <h1>局域网 · {lanRoom}</h1>
+          <h1>联机 · {lanRoom}</h1>
           <span>{lanMsg}</span>
         </div>
 
         {!lanView ? (
           <section className="ddz-lobby">
-            <h2>房间大厅</h2>
-            <ul>
-              {lanLobby.map((p) => (
-                <li key={p.seat}>
-                  座位 {p.seat + 1}：{p.name || '空'} {p.ready ? '✓就绪' : '…'} {!p.connected ? '(离线)' : ''}
-                  {lanSeat === p.seat ? '（我）' : ''}
-                </li>
-              ))}
-            </ul>
-            <div className="ddz-actions">
-              <button
-                type="button"
-                className="ddz-btn ddz-btn-ghost"
-                onClick={() => socketRef.current?.send({ type: 'ready', ready: true })}
-              >
-                准备
-              </button>
+            <header className="ddz-lobby-head">
+              <div>
+                <p className="ddz-lobby-kicker">ROOM LOBBY</p>
+                <h2>房间大厅</h2>
+              </div>
+              <span className="ddz-lobby-room">{lanRoom}</span>
+            </header>
+
+            <div className="ddz-lobby-seats">
+              {seats.map((p) => {
+                const isMe = lanSeat === p.seat;
+                const isHost = lanHostSeat === p.seat;
+                const empty = !p.name;
+                const status = empty ? '空位' : !p.connected ? '离线' : p.ready ? '已准备' : '已入座';
+                return (
+                  <article
+                    key={p.seat}
+                    className={`ddz-lobby-seat ${isMe ? 'is-me' : ''} ${p.connected ? 'is-online' : ''} ${p.ready ? 'is-ready' : ''}`}
+                  >
+                    <PlayerAvatar seat={p.seat} size="lg" />
+                    <div className="ddz-lobby-seat-meta">
+                      <strong>
+                        座位 {p.seat + 1}
+                        {isHost ? ' · 房主' : ''}
+                        {isMe ? ' · 我' : ''}
+                      </strong>
+                      <span>{p.name || '等待加入…'}</span>
+                    </div>
+                    <div className="ddz-lobby-seat-side">
+                      <em className="ddz-lobby-status">{status}</em>
+                      {!isMe && lanSeat !== null ? (
+                        empty ? (
+                          <button
+                            type="button"
+                            className="ddz-seat-action"
+                            onClick={() => socketRef.current?.send({ type: 'changeSeat', targetSeat: p.seat })}
+                          >
+                            换到这里
+                          </button>
+                        ) : p.connected ? (
+                          <button
+                            type="button"
+                            className="ddz-seat-action"
+                            onClick={() => socketRef.current?.send({ type: 'requestSwap', targetSeat: p.seat })}
+                          >
+                            申请换位
+                          </button>
+                        ) : null
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {swapAsk ? (
+              <div className="ddz-swap-banner">
+                <p>
+                  <strong>{swapAsk.fromName}</strong>（座位 {swapAsk.fromSeat + 1}）申请与你换位
+                </p>
+                <div className="ddz-lobby-actions">
+                  <button
+                    type="button"
+                    className="ddz-btn ddz-btn-play"
+                    onClick={() => {
+                      socketRef.current?.send({ type: 'respondSwap', fromSeat: swapAsk.fromSeat, accept: true });
+                      setSwapAsk(null);
+                    }}
+                  >
+                    同意
+                  </button>
+                  <button
+                    type="button"
+                    className="ddz-btn ddz-btn-pass"
+                    onClick={() => {
+                      socketRef.current?.send({ type: 'respondSwap', fromSeat: swapAsk.fromSeat, accept: false });
+                      setSwapAsk(null);
+                    }}
+                  >
+                    拒绝
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="ddz-lobby-actions">
+              {(() => {
+                const me = seats.find((s) => s.seat === lanSeat);
+                const iAmReady = Boolean(me?.ready);
+                return (
+                  <button
+                    type="button"
+                    className={`ddz-btn ${iAmReady ? 'ddz-btn-pass' : 'ddz-btn-hint'}`}
+                    onClick={() => socketRef.current?.send({ type: 'ready', ready: !iAmReady })}
+                  >
+                    {iAmReady ? '取消准备' : '准备'}
+                  </button>
+                );
+              })()}
               {lanIsHost ? (
                 <button
                   type="button"
@@ -823,9 +979,10 @@ function DoudizhuPage() {
                   开始游戏
                 </button>
               ) : (
-                <p className="ddz-muted">等待房主开始…</p>
+                <p className="ddz-lobby-wait">等待房主开始…</p>
               )}
             </div>
+            <p className="ddz-lobby-tip">点空位可换座；点有人的座位可申请换位。三人全部准备后房主可开始。</p>
           </section>
         ) : (
           <TableView
