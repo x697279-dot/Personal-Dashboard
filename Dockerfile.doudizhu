@@ -1,0 +1,17 @@
+# 斗地主联机 WebSocket 服务（可部署到 Render / Railway / Fly.io）
+# 注意：Vercel 不适合跑长连接 WebSocket
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY server ./server
+COPY src/doudizhu ./src/doudizhu
+COPY tsconfig.json ./
+
+ENV PORT=3789
+EXPOSE 3789
+
+CMD ["npx", "tsx", "server/doudizhu-server.ts"]

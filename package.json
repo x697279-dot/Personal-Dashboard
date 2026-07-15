@@ -2,20 +2,24 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "doudizhu-server": "tsx server/doudizhu-server.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
     "phaser": "^4.1.0",
     "react": "latest",
     "react-dom": "latest",
-    "three": "latest",         
+    "three": "latest",
     "typescript": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "ws": "^8.21.1"
   },
-  "devDependencies": {    
+  "devDependencies": {
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@types/three": "latest"
+    "@types/three": "latest",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.1"
   }
 }

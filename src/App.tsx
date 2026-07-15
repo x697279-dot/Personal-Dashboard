@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AirplaneGamePage } from './AirplaneGamePage';
+import { DoudizhuPage } from './DoudizhuPage';
 import { GamePage } from './GamePage';
 import { MinesweeperGamePage } from './MinesweeperGamePage';
 import { PlatformerGamePage } from './PlatformerGamePage';
@@ -105,6 +106,17 @@ const games = [
     loadingDesc: '正在洗牌、铺开十列牌桌...',
     accent: 'spider',
   },
+  {
+    id: 'doudizhu',
+    badge: 'DOU DIZHU',
+    title: '斗地主',
+    description: '单机多档 AI，或局域网三人联机：叫抢地主、标准牌型、积分可负。',
+    hash: '#/game/doudizhu',
+    buttonText: '开始斗地主',
+    loadingTitle: 'DOU DIZHU',
+    loadingDesc: '正在洗牌、准备叫抢地主...',
+    accent: 'doudizhu',
+  },
 ] as const;
 
 type GameEntry = (typeof games)[number];
@@ -151,7 +163,7 @@ function HomePage() {
             <span>快乐星球</span>
             <span>准备出发。</span>
           </h1>
-          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战、奶牛闯关、废土幸存者、扫雷或蜘蛛纸牌。</p>
+          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战、奶牛闯关、废土幸存者、扫雷、蜘蛛纸牌或斗地主。</p>
         </div>
 
         <div className="capy-stage" aria-hidden="true">
@@ -168,7 +180,7 @@ function HomePage() {
       <section className="capy-games-shell" aria-label="游戏选择">
         <div className="capy-games-intro">
           <p className="capy-kicker">Pick Your Game</p>
-          <h2>六款小游戏，随时开玩。</h2>
+          <h2>七款小游戏，随时开玩。</h2>
         </div>
 
         <div className="capy-games-grid">
@@ -191,8 +203,8 @@ function HomePage() {
       </section>
 
       <div className="capy-marquee" aria-hidden="true">
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DRIVE · </span>
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DOU DIZHU · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DOU DIZHU · DRIVE · </span>
       </div>
 
       <section className="capy-gallery-shell" aria-label="素材图片展示">
@@ -237,6 +249,7 @@ function App() {
   if (route === '#/game/wasteland') return <WastelandSurvivorPage />;
   if (route === '#/game/minesweeper') return <MinesweeperGamePage />;
   if (route === '#/game/spider') return <SpiderSolitairePage />;
+  if (route === '#/game/doudizhu') return <DoudizhuPage />;
   return <HomePage />;
 }
 

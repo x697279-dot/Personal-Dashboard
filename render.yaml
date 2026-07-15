@@ -1,0 +1,8 @@
+# Render.com 一键部署联机服务（Web Service）
+services:
+  - type: web
+    name: doudizhu-ws
+    runtime: docker
+    dockerfilePath: ./Dockerfile.doudizhu
+    plan: free
+    healthCheckPath: /
