@@ -679,14 +679,15 @@ function DoudizhuPage() {
 
   useEffect(() => {
     const syncMobileLayout = () => {
-      const playing = screen === 'solo' || screen === 'lan';
+      // 仅对局中启用横屏缩放/微信旋转；大厅保持竖屏可读布局
+      const inMatch = screen === 'solo' || (screen === 'lan' && Boolean(lanView));
       const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
       const portrait = window.matchMedia('(orientation: portrait)').matches;
       const landscape = window.matchMedia('(orientation: landscape)').matches;
       const compact =
-        playing &&
+        inMatch &&
         ((landscape && window.innerHeight <= 740 && window.innerWidth <= 1100) || (isWeChat && portrait));
-      const rotate = playing && isWeChat && portrait;
+      const rotate = inMatch && isWeChat && portrait;
       setMobileTable(compact);
       setWechatPortrait(rotate);
       document.documentElement.classList.toggle('ddz-wechat-landscape', rotate);
@@ -699,7 +700,7 @@ function DoudizhuPage() {
       window.removeEventListener('resize', syncMobileLayout);
       window.removeEventListener('orientationchange', syncMobileLayout);
     };
-  }, [screen]);
+  }, [screen, lanView]);
 
   if (screen === 'menu') {
     return (
@@ -931,16 +932,19 @@ function DoudizhuPage() {
       );
     });
     const allReady = seats.every((p) => p.ready && p.connected && p.name);
+    const inMatch = Boolean(lanView);
     return (
       <div
-        className={`ddz-page ddz-playing ${mobileTable ? 'is-mobile-table' : ''}`}
+        className={`ddz-page ${inMatch ? `ddz-playing ${mobileTable ? 'is-mobile-table' : ''}` : 'ddz-lobby-screen'}`}
         onPointerDown={() => void unlockDdzAudio()}
       >
-        <div className="ddz-rotate-tip" role="status">
-          {wechatPortrait
-            ? '微信内已模拟横屏；也可点右上角 ··· → 在浏览器打开'
-            : '请将手机横屏游玩，显示更完整'}
-        </div>
+        {inMatch ? (
+          <div className="ddz-rotate-tip" role="status">
+            {wechatPortrait
+              ? '微信内已模拟横屏；也可点右上角 ··· → 在浏览器打开'
+              : '请将手机横屏游玩，显示更完整'}
+          </div>
+        ) : null}
         <div className="ddz-topbar">
           <button
             type="button"

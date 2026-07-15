@@ -6465,9 +6465,137 @@ body:has(.ddz-page) {
   font-size: 0.88rem;
 }
 
+/* 联机大厅：手机竖屏可读（不对大厅做微信横屏旋转） */
+.ddz-lobby-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-height: 100dvh;
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ddz-lobby-screen .ddz-topbar {
+  width: 100%;
+  max-width: 640px;
+}
+
+.ddz-lobby-screen .ddz-lobby {
+  margin-top: 0;
+}
+
 @media (max-width: 720px) {
   .ddz-mode-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ddz-lobby-screen .ddz-topbar-right {
+    font-size: 0.78rem;
+    max-width: 62%;
+    text-align: right;
+  }
+
+  .ddz-lobby-screen .ddz-topbar-right span {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ddz-lobby {
+    width: calc(100% - 4px);
+    max-width: none;
+    margin: 0 auto 8px;
+    padding: 14px 12px 12px;
+    border-radius: 18px;
+  }
+
+  .ddz-lobby-head {
+    margin-bottom: 12px;
+    align-items: center;
+  }
+
+  .ddz-lobby-head h2 {
+    font-size: 1.25rem;
+  }
+
+  .ddz-lobby-kicker {
+    letter-spacing: 0.1em;
+    font-size: 0.68rem;
+  }
+
+  .ddz-lobby-room {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+
+  .ddz-lobby-seats {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .ddz-lobby-seat {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'avatar meta'
+      'side side';
+    gap: 8px 10px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .ddz-lobby-seat > .ddz-avatar {
+    grid-area: avatar;
+  }
+
+  .ddz-lobby-seat-meta {
+    grid-area: meta;
+  }
+
+  .ddz-lobby-seat-side {
+    grid-area: side;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    justify-items: start;
+  }
+
+  .ddz-lobby-status,
+  .ddz-seat-action {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+
+  .ddz-lobby-actions {
+    gap: 10px;
+  }
+
+  .ddz-lobby-actions .ddz-btn {
+    min-height: 42px;
+    flex: 1 1 auto;
+    min-width: 110px;
+  }
+
+  .ddz-lobby-tip {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    margin-top: 10px;
+  }
+
+  .ddz-swap-banner {
+    padding: 10px 12px;
   }
 }
 
