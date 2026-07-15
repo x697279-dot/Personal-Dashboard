@@ -5755,13 +5755,18 @@ body:has(.ddz-page) {
 
 .ddz-playing {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   gap: 10px;
+  min-height: 100dvh;
   padding:
     max(10px, env(safe-area-inset-top))
     max(12px, env(safe-area-inset-right))
     max(12px, env(safe-area-inset-bottom))
     max(12px, env(safe-area-inset-left));
+}
+
+.ddz-playing > .ddz-table {
+  min-height: 0;
 }
 
 .ddz-topbar {
@@ -5771,6 +5776,18 @@ body:has(.ddz-page) {
   gap: 12px;
   width: min(1100px, 100%);
   margin: 0 auto;
+}
+
+.ddz-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+  color: #334155;
+  font-weight: 800;
+  font-size: 0.88rem;
 }
 
 .ddz-topbar h1 {
@@ -6452,32 +6469,385 @@ body:has(.ddz-page) {
   .ddz-mode-grid {
     grid-template-columns: 1fr;
   }
+}
 
-  .ddz-card {
-    width: 44px;
-    height: 64px;
+.ddz-rotate-tip {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .ddz-page.ddz-playing:not(.is-mobile-table) .ddz-rotate-tip {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto 8px;
+    width: min(520px, calc(100% - 16px));
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    border-radius: 14px;
+    background: rgba(224, 242, 254, 0.95);
+    color: #0c4a6e;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    box-shadow: 0 8px 20px rgba(14, 116, 144, 0.16);
+  }
+}
+
+/* 微信竖屏：CSS 旋转模拟横屏（微信内无法强制系统横屏） */
+html.ddz-wechat-landscape,
+html.ddz-wechat-landscape body,
+html.ddz-wechat-landscape #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  background: #87ceeb;
+}
+
+/* top-left 旋转：避免居中旋转在部分机型上下留白 */
+html.ddz-wechat-landscape .ddz-page.ddz-playing {
+  position: fixed;
+  z-index: 80;
+  top: 0;
+  left: 0;
+  width: 100vh;
+  width: 100dvh;
+  height: 100vw;
+  height: 100dvw;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 2px 4px;
+  box-sizing: border-box;
+  transform: rotate(90deg) translate(0, -100%);
+  transform-origin: top left;
+}
+
+html.ddz-wechat-landscape .ddz-page.ddz-playing .ddz-rotate-tip {
+  display: flex;
+}
+
+/* 手机牌桌：按 vmin 缩放适配机型（对标常见斗地主 App 比例） */
+.ddz-page.ddz-playing.is-mobile-table {
+  --ddz-ui: clamp(11px, 2.75vmin, 14px);
+  --ddz-card-w: clamp(28px, 6.8vmin, 40px);
+  --ddz-card-h: clamp(40px, 9.6vmin, 56px);
+  --ddz-card-overlap: clamp(-13px, -2.6vmin, -8px);
+  --ddz-mini-w: clamp(20px, 4.6vmin, 26px);
+  --ddz-mini-h: clamp(28px, 6.5vmin, 38px);
+  --ddz-avatar: clamp(24px, 5.6vmin, 32px);
+  --ddz-btn-h: clamp(32px, 7.6vmin, 40px);
+
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0.15em;
+  padding: 1px 4px 2px;
+  grid-template-rows: auto minmax(0, 1fr);
+  font-size: var(--ddz-ui);
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-rotate-tip {
+  display: none !important;
+}
+
+html.ddz-wechat-landscape .ddz-page.ddz-playing.is-mobile-table .ddz-rotate-tip {
+  display: none !important;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-topbar {
+  width: 100%;
+  gap: 0.4em;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-topbar h1 {
+  display: none;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-topbar-right {
+  font-size: 0.95em;
+  gap: 0.35em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-back-inline {
+  min-height: calc(var(--ddz-btn-h) * 0.85);
+  padding: 0 0.75em;
+  font-size: 0.95em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-table {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 0.2em;
+  padding: 0.25em 0.35em;
+  border-radius: 10px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-table-top {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-scores {
+  flex: 1;
+  min-width: 0;
+  gap: 0.3em;
+  justify-content: center;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-score-pill {
+  min-width: 0;
+  max-width: 9.5em;
+  flex: 0 1 auto;
+  gap: 0.35em;
+  padding: 0.15em 0.45em 0.15em 0.2em;
+  border-radius: 999px;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-avatar-sm {
+  width: calc(var(--ddz-avatar) * 0.9);
+  height: calc(var(--ddz-avatar) * 0.9);
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-score-pill span {
+  font-size: 0.78em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 5.5em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-score-pill strong {
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-bottom-dock {
+  padding: 0.2em 0.45em;
+  border-radius: 8px;
+  gap: 0.1em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-bottom-dock span,
+.ddz-page.ddz-playing.is-mobile-table .ddz-bottom-dock em {
+  font-size: 0.85em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-card.is-small,
+.ddz-page.ddz-playing.is-mobile-table .ddz-card-back {
+  width: var(--ddz-mini-w);
+  height: var(--ddz-mini-h);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-battlefield {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 1fr);
+  gap: 0.25em;
+  min-height: 0;
+  align-items: start;
+  padding: 0 2%;
+  margin-top: 0;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-side {
+  gap: 0.25em;
+  min-height: 0;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-side-center {
+  align-self: center;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-opponent {
+  gap: 0.4em;
+  padding: 0.3em 0.45em;
+  border-radius: 8px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-side-left .ddz-opponent {
+  margin-right: auto;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-side-right .ddz-opponent {
+  margin-left: auto;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-avatar-lg {
+  width: var(--ddz-avatar);
+  height: var(--ddz-avatar);
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-opponent-meta p,
+.ddz-page.ddz-playing.is-mobile-table .ddz-opponent-meta strong {
+  font-size: 0.95em;
+  line-height: 1.1;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-play-pile {
+  min-height: 0;
+  gap: 0.15em;
+  padding: 0.3em 0.4em;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-play-pile-head {
+  font-size: 0.88em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-play-pile-body {
+  min-height: calc(var(--ddz-mini-h) + 4px);
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-play-empty,
+.ddz-page.ddz-playing.is-mobile-table .ddz-pass-tag {
+  font-size: 0.95em;
+  padding: 0.2em 0.55em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-turn-banner {
+  padding: 0.25em 0.7em;
+  font-size: 1em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-status {
+  margin: 0.2em 0 0;
+  font-size: 0.9em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-countdown {
+  padding: 0.1em 0.45em;
+  font-size: 0.9em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-my-zone {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 0.3em;
+  padding: 0.4em 0.5em 0.45em;
+  border-radius: 10px;
+  min-height: 0;
+  overflow: visible;
+  width: min(96%, 760px);
+  margin: 0 auto;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-my-head {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-my-head > .ddz-avatar {
+  display: none;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-my-head .ddz-play-pile {
+  min-height: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-my-head .ddz-play-pile-head {
+  justify-content: center;
+  font-size: 0.9em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-my-head .ddz-play-pile-body {
+  min-height: calc(var(--ddz-mini-h) + 2px);
+  justify-content: center;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-hand {
+  min-height: calc(var(--ddz-card-h) + 12px);
+  max-width: 86%;
+  margin: 0 auto;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  padding: 0.55em 0.2em 0.15em;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-hand .ddz-card {
+  flex: 0 0 auto;
+  width: var(--ddz-card-w);
+  height: var(--ddz-card-h);
+  margin-left: var(--ddz-card-overlap);
+  border-radius: 6px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-hand .ddz-card:first-child {
+  margin-left: 0;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-hand .ddz-card.is-selected {
+  transform: translateY(-0.55em);
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-card-label {
+  font-size: 1.05em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-card-suit {
+  font-size: 0.95em;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-actions {
+  gap: 0.45em;
+  padding-top: 0;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-btn {
+  min-width: 5.2em;
+  min-height: var(--ddz-btn-h);
+  padding: 0 0.9em;
+  font-size: 1.05em;
+  border-radius: 999px;
+}
+
+.ddz-page.ddz-playing.is-mobile-table .ddz-hint-tip {
+  min-height: 1em;
+  margin: 0;
+  font-size: 0.9em;
+}
+
+@media (max-height: 400px), (max-width: 380px) {
+  .ddz-page.ddz-playing.is-mobile-table {
+    --ddz-ui: clamp(9px, 2.3vmin, 12px);
+    --ddz-card-w: clamp(24px, 5.6vmin, 32px);
+    --ddz-card-h: clamp(34px, 8vmin, 46px);
+    --ddz-card-overlap: clamp(-11px, -2.2vmin, -6px);
   }
 
-  .ddz-table-top {
-    flex-direction: column;
+  .ddz-page.ddz-playing.is-mobile-table .ddz-table-top {
+    display: none;
   }
 
-  .ddz-my-head {
-    grid-template-columns: 1fr;
-    justify-items: center;
-  }
-
-  .ddz-bottom-dock {
-    width: 100%;
-    justify-items: start;
-    text-align: left;
-  }
-
-  .ddz-bottom-dock .ddz-bottom-cards {
-    justify-content: flex-start;
-  }
-
-  .ddz-battlefield {
-    grid-template-columns: 1fr;
+  .ddz-page.ddz-playing.is-mobile-table .ddz-hand {
+    max-width: 84%;
   }
 }

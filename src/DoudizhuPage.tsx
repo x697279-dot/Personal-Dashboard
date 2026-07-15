@@ -12,6 +12,12 @@ import {
 } from './doudizhu/engine/game';
 import { isRedSuit, type Card } from './doudizhu/engine/cards';
 import { analyzePattern, patternLabel } from './doudizhu/engine/patterns';
+import {
+  announceBid,
+  announcePass,
+  announcePlay,
+  unlockDdzAudio,
+} from './doudizhu/audio';
 import { connectDoudizhu, looksLikePrivateHost } from './doudizhu/net/client';
 import { DOUDIZHU_DEFAULT_PORT, type ServerToClient } from './doudizhu/net/protocol';
 import type { ClientView } from './doudizhu/engine/game';
@@ -628,9 +634,76 @@ function DoudizhuPage() {
     return () => socketRef.current?.close();
   }, []);
 
+  const announceKeyRef = useRef('');
+  const prevBidsRef = useRef<[number, number, number]>([-1, -1, -1]);
+  const activeView = screen === 'solo' ? soloView : screen === 'lan' ? lanView : null;
+
+  useEffect(() => {
+    if (screen === 'solo' || screen === 'lan') {
+      void unlockDdzAudio();
+    }
+  }, [screen]);
+
+  useEffect(() => {
+    if (!activeView) return;
+    const hist = activeView.trickHistory;
+    if (!hist.length) return;
+    const last = hist[hist.length - 1]!;
+    const key = `play-${hist.length}-${last.seat}-${last.pass ? 'p' : last.cards.map((c) => c.id).join(',')}`;
+    if (announceKeyRef.current === key) return;
+    announceKeyRef.current = key;
+    void unlockDdzAudio();
+    if (last.pass) announcePass();
+    else if (last.cards.length) announcePlay(last.cards);
+  }, [activeView?.trickHistory, activeView]);
+
+  useEffect(() => {
+    if (!activeView || activeView.phase !== 'bidding') {
+      prevBidsRef.current = [-1, -1, -1];
+      return;
+    }
+    const bids = activeView.bids;
+    for (let i = 0; i < 3; i += 1) {
+      const now = bids[i as Seat];
+      const was = prevBidsRef.current[i]!;
+      if (now >= 0 && now !== was) {
+        void unlockDdzAudio();
+        announceBid(now as 0 | 1 | 2 | 3);
+      }
+    }
+    prevBidsRef.current = [bids[0], bids[1], bids[2]];
+  }, [activeView?.bids, activeView?.phase, activeView]);
+
+  const [mobileTable, setMobileTable] = useState(false);
+  const [wechatPortrait, setWechatPortrait] = useState(false);
+
+  useEffect(() => {
+    const syncMobileLayout = () => {
+      const playing = screen === 'solo' || screen === 'lan';
+      const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+      const portrait = window.matchMedia('(orientation: portrait)').matches;
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const compact =
+        playing &&
+        ((landscape && window.innerHeight <= 740 && window.innerWidth <= 1100) || (isWeChat && portrait));
+      const rotate = playing && isWeChat && portrait;
+      setMobileTable(compact);
+      setWechatPortrait(rotate);
+      document.documentElement.classList.toggle('ddz-wechat-landscape', rotate);
+    };
+    syncMobileLayout();
+    window.addEventListener('resize', syncMobileLayout);
+    window.addEventListener('orientationchange', syncMobileLayout);
+    return () => {
+      document.documentElement.classList.remove('ddz-wechat-landscape');
+      window.removeEventListener('resize', syncMobileLayout);
+      window.removeEventListener('orientationchange', syncMobileLayout);
+    };
+  }, [screen]);
+
   if (screen === 'menu') {
     return (
-      <div className="ddz-page">
+      <div className="ddz-page" onPointerDown={() => void unlockDdzAudio()}>
         <button type="button" className="ddz-back" onClick={() => { window.location.hash = '#/'; }}>
           返回主页
         </button>
@@ -788,15 +861,24 @@ function DoudizhuPage() {
 
   if (screen === 'solo' && soloView) {
     return (
-      <div className="ddz-page ddz-playing">
+      <div
+        className={`ddz-page ddz-playing ${mobileTable ? 'is-mobile-table' : ''}`}
+        onPointerDown={() => void unlockDdzAudio()}
+      >
+        <div className="ddz-rotate-tip" role="status">
+          {wechatPortrait
+            ? '微信内已模拟横屏；也可点右上角 ··· → 在浏览器打开'
+            : '请将手机横屏游玩，显示更完整'}
+        </div>
         <div className="ddz-topbar">
           <button type="button" className="ddz-back-inline" onClick={() => setScreen('menu')}>
             退出
           </button>
-          <h1>单机斗地主</h1>
-          <span>
-            AI {AI_LABEL[aiDiffs[0]]}/{AI_LABEL[aiDiffs[1]]}
-          </span>
+          <div className="ddz-topbar-right">
+            <span>
+              AI {AI_LABEL[aiDiffs[0]]}/{AI_LABEL[aiDiffs[1]]}
+            </span>
+          </div>
         </div>
         <TableView
           view={soloView}
@@ -850,7 +932,15 @@ function DoudizhuPage() {
     });
     const allReady = seats.every((p) => p.ready && p.connected && p.name);
     return (
-      <div className="ddz-page ddz-playing">
+      <div
+        className={`ddz-page ddz-playing ${mobileTable ? 'is-mobile-table' : ''}`}
+        onPointerDown={() => void unlockDdzAudio()}
+      >
+        <div className="ddz-rotate-tip" role="status">
+          {wechatPortrait
+            ? '微信内已模拟横屏；也可点右上角 ··· → 在浏览器打开'
+            : '请将手机横屏游玩，显示更完整'}
+        </div>
         <div className="ddz-topbar">
           <button
             type="button"
@@ -864,8 +954,10 @@ function DoudizhuPage() {
           >
             断开
           </button>
-          <h1>联机 · {lanRoom}</h1>
-          <span>{lanMsg}</span>
+          <div className="ddz-topbar-right">
+            <span>{lanRoom ? `房间 ${lanRoom}` : ''}</span>
+            {lanMsg ? <span>{lanMsg}</span> : null}
+          </div>
         </div>
 
         {!lanView ? (
