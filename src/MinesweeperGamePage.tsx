@@ -190,6 +190,7 @@ function MinesweeperGamePage() {
   const [elapsed, setElapsed] = useState(0);
   const [revealedPulse, setRevealedPulse] = useState<string | null>(null);
   const [flagMode, setFlagMode] = useState(false);
+  const [showResult, setShowResult] = useState(false);
   const longPressRef = useRef<{
     timer: number | null;
     pointerId: number | null;
@@ -268,6 +269,7 @@ function MinesweeperGamePage() {
     setElapsed(0);
     setRevealedPulse(null);
     setFlagMode(false);
+    setShowResult(false);
   }, []);
 
   const startDifficulty = (diff: Difficulty) => {
@@ -642,14 +644,34 @@ function MinesweeperGamePage() {
       </div>
 
       <p className="mines-tip">
-        {mobilePlay
-          ? flagMode
-            ? '点击格子插旗'
-            : '点击格子翻开'
-          : '左键翻开 · 右键插旗 · 第一下保证安全'}
+        {status === 'won' || status === 'lost'
+          ? status === 'won'
+            ? '已通关 · 可先查看棋盘'
+            : '已踩雷 · 可先查看翻开区域与雷区'
+          : mobilePlay
+            ? flagMode
+              ? '点击格子插旗'
+              : '点击格子翻开'
+            : '左键翻开 · 右键插旗 · 第一下保证安全'}
       </p>
 
       {status === 'won' || status === 'lost' ? (
+        <div className={`mines-end-dock ${status === 'won' ? 'is-win' : 'is-lose'}`}>
+          <span>
+            {status === 'won' ? '全部扫清' : '踩到地雷'} · {formatTime(elapsed)}
+          </span>
+          <div className="mines-end-dock-actions">
+            <button type="button" className="secondary" onClick={() => setShowResult(true)}>
+              查看结果
+            </button>
+            <button type="button" onClick={() => resetGame(difficulty)}>
+              再来一局
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showResult && (status === 'won' || status === 'lost') ? (
         <div className="mines-result-overlay" role="dialog" aria-modal="true">
           <div className={`mines-result-card ${status === 'won' ? 'is-win' : 'is-lose'}`}>
             <p className="mines-kicker">{status === 'won' ? 'CLEAR' : 'BOOM'}</p>
@@ -658,6 +680,9 @@ function MinesweeperGamePage() {
               {difficulty.label}关 · 用时 <strong>{formatTime(elapsed)}</strong>
             </p>
             <div className="mines-result-actions">
+              <button type="button" className="secondary" onClick={() => setShowResult(false)}>
+                继续看棋盘
+              </button>
               <button type="button" onClick={() => resetGame(difficulty)}>
                 再来一局
               </button>

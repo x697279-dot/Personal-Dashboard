@@ -4229,13 +4229,20 @@ body:has(.mines-page) {
 
 .mines-playing {
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 16px;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  min-height: 100dvh;
+  box-sizing: border-box;
   padding:
     max(16px, env(safe-area-inset-top))
     max(16px, env(safe-area-inset-right))
-    max(16px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-bottom))
     max(16px, env(safe-area-inset-left));
+}
+
+.mines-playing > .mines-board-shell {
+  min-height: 0;
+  align-self: stretch;
 }
 
 .mines-theme-easy {
@@ -4340,7 +4347,7 @@ body:has(.mines-page) {
   gap: 3px;
   width: min(100%, 720px);
   aspect-ratio: 1;
-  max-height: min(72dvh, 720px);
+  max-height: min(64dvh, 680px);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -4348,14 +4355,21 @@ body:has(.mines-page) {
 }
 
 .mines-board-hard {
-  width: min(100%, 780px);
-  max-height: min(76dvh, 780px);
+  width: min(100%, 760px);
+  max-height: min(64dvh, 720px);
 }
 
 .mines-board-extreme {
-  width: min(100%, 860px);
-  max-height: min(78dvh, 860px);
+  width: min(100%, 820px);
+  max-height: min(64dvh, 760px);
   gap: 2px;
+}
+
+/* 结算底栏出现时再压一点棋盘，避免底栏被裁切 */
+.mines-playing:has(.mines-end-dock) .mines-board,
+.mines-playing:has(.mines-end-dock) .mines-board-hard,
+.mines-playing:has(.mines-end-dock) .mines-board-extreme {
+  max-height: min(56dvh, 640px);
 }
 
 .mines-cell {
@@ -4472,6 +4486,68 @@ body:has(.mines-page) {
   font-size: 0.88rem;
   font-weight: 700;
   text-align: center;
+}
+
+.mines-end-dock {
+  position: relative;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  flex-shrink: 0;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  border-radius: 16px;
+  background: rgba(24, 10, 14, 0.88);
+  color: #fecdd3;
+  padding: 10px 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  box-sizing: border-box;
+}
+
+.mines-end-dock.is-win {
+  border-color: rgba(45, 212, 191, 0.4);
+  background: rgba(6, 28, 28, 0.88);
+  color: #a7f3d0;
+}
+
+.mines-end-dock > span {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.mines-end-dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mines-end-dock-actions button {
+  min-height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2dd4bf, #0d9488);
+  color: #042f2e;
+  cursor: pointer;
+  padding: 0 14px;
+  font-weight: 900;
+  font-size: 0.84rem;
+}
+
+.mines-end-dock-actions button.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ecfeff;
+}
+
+.mines-playing.is-mobile-play .mines-end-dock {
+  width: 100%;
+  border-radius: 12px;
+  padding: 8px 10px;
 }
 
 .mines-result-overlay {
@@ -4592,9 +4668,15 @@ body:has(.mines-page) {
   .mines-board-extreme {
     width: 100%;
     max-width: 100%;
-    max-height: none;
+    max-height: min(58dvh, 100vw);
     aspect-ratio: 1;
     box-sizing: border-box;
+  }
+
+  .mines-playing:has(.mines-end-dock) .mines-board,
+  .mines-playing:has(.mines-end-dock) .mines-board-hard,
+  .mines-playing:has(.mines-end-dock) .mines-board-extreme {
+    max-height: min(50dvh, 100vw);
   }
 
   .mines-board-shell {
