@@ -1,4 +1,4 @@
-斗地主背景音乐（Pixabay 免，多首轮播）
+斗地主背景音乐（Pixabay 下载，多首轮播）
 
 目录：public/doudizhu/
 
@@ -8,8 +8,14 @@
   bgm-03-no-copyright-music.mp3     — SigmaMusicArt / No Copyright Music
   bgm-04-escape-your-love.mp3       — FASSounds / Escape Your Love
   bgm-05-carnaval.mp3               — Alec_Koff / Carnaval
+  bgm-06-trending-music.mp3         — SigmaMusicArt / No Copyright Trending Music
+  bgm-07-happy-music.mp3            — ProductionMusic / Happy Happy Music
+  bgm-08-bass.mp3                   — JonasBlakeWood / Bass
+  bgm-09-future-bass.mp3            — JonasBlakeWood / Future Bass Music
+  bgm-10-summer.mp3                 — JonasBlakeWood / Summer
+  bgm-11-pop-upbeat.mp3             — JonasBlakeWood / Pop Upbeat
   bgm.mp3                           — 与 01 相同（兼容旧路径）
 
 来源：Pixabay Music（免版税）。勿接网易云 / QQ 等流媒体接口。
 
-游戏内点「音乐开」后循环轮播；若全部缺失则回退轻柔 WebAudio 垫乐。
+游戏内迷你播放器可切歌 / 播放暂停；若全部缺失则回退轻柔 WebAudio 垫乐。

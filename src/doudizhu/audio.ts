@@ -38,6 +38,12 @@ const BGM_CANDIDATES = [
   '/doudizhu/bgm-03-no-copyright-music.mp3',
   '/doudizhu/bgm-04-escape-your-love.mp3',
   '/doudizhu/bgm-05-carnaval.mp3',
+  '/doudizhu/bgm-06-trending-music.mp3',
+  '/doudizhu/bgm-07-happy-music.mp3',
+  '/doudizhu/bgm-08-bass.mp3',
+  '/doudizhu/bgm-09-future-bass.mp3',
+  '/doudizhu/bgm-10-summer.mp3',
+  '/doudizhu/bgm-11-pop-upbeat.mp3',
   '/doudizhu/bgm.mp3',
 ];
 const BGM_VOLUME = 0.22;
@@ -47,6 +53,12 @@ const BGM_TITLES: Record<string, string> = {
   '/doudizhu/bgm-03-no-copyright-music.mp3': 'No Copyright Music',
   '/doudizhu/bgm-04-escape-your-love.mp3': 'Escape Your Love',
   '/doudizhu/bgm-05-carnaval.mp3': 'Carnaval',
+  '/doudizhu/bgm-06-trending-music.mp3': 'Trending Music',
+  '/doudizhu/bgm-07-happy-music.mp3': 'Happy Music',
+  '/doudizhu/bgm-08-bass.mp3': 'Bass',
+  '/doudizhu/bgm-09-future-bass.mp3': 'Future Bass',
+  '/doudizhu/bgm-10-summer.mp3': 'Summer',
+  '/doudizhu/bgm-11-pop-upbeat.mp3': 'Pop Upbeat',
   '/doudizhu/bgm.mp3': '背景音乐',
 };
 

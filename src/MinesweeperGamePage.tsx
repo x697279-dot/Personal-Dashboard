@@ -531,7 +531,7 @@ function MinesweeperGamePage() {
           </div>
         </div>
 
-        <div className="mines-hud-actions">
+        <div className={`mines-hud-actions${mobilePlay ? ' is-mobile-actions' : ''}`}>
           {mobilePlay ? (
             <div className="mines-mode-switch" role="group" aria-label="操作模式">
               <button
@@ -552,21 +552,23 @@ function MinesweeperGamePage() {
               </button>
             </div>
           ) : null}
-          <button type="button" className="mines-ghost-button" onClick={() => resetGame(difficulty)}>
-            重开
-          </button>
-          <button type="button" className="mines-ghost-button" onClick={() => setSelected(null)}>
-            选关
-          </button>
-          <button
-            type="button"
-            className="mines-ghost-button"
-            onClick={() => {
-              window.location.hash = '#/';
-            }}
-          >
-            主页
-          </button>
+          <div className="mines-utility-actions">
+            <button type="button" className="mines-ghost-button" onClick={() => resetGame(difficulty)}>
+              重开
+            </button>
+            <button type="button" className="mines-ghost-button" onClick={() => setSelected(null)}>
+              选关
+            </button>
+            <button
+              type="button"
+              className="mines-ghost-button"
+              onClick={() => {
+                window.location.hash = '#/';
+              }}
+            >
+              主页
+            </button>
+          </div>
         </div>
       </header>
 
