@@ -2,13 +2,14 @@
 
 import type { Card } from '../engine/cards';
 import { sortCards } from '../engine/cards';
-import type { GameState, Seat } from '../engine/game';
+import type { DoubleAction, GameState, Seat } from '../engine/game';
 import { analyzePattern, canBeat, type Pattern } from '../engine/patterns';
 
 export type AiDifficulty = 'easy' | 'normal' | 'hard';
 
 export type AiAction =
   | { type: 'bid'; bid: 0 | 1 | 2 | 3 }
+  | { type: 'double'; action: DoubleAction }
   | { type: 'play'; cardIds: string[] }
   | { type: 'pass' };
 
@@ -151,24 +152,59 @@ export function listLegalPlays(hand: Card[], prev: Pattern | null): Card[][] {
 
 export function chooseBid(state: GameState, seat: Seat, difficulty: AiDifficulty): AiAction {
   const strength = handStrength(state.hands[seat]);
-  const current = state.bidScore;
+  const phase = state.bidPhase ?? 'call';
 
-  let target = 0;
-  if (difficulty === 'easy') {
-    if (strength >= 10) target = 1;
-    if (strength >= 14) target = 2;
-  } else if (difficulty === 'normal') {
-    if (strength >= 8) target = 1;
-    if (strength >= 12) target = 2;
-    if (strength >= 16) target = 3;
-  } else {
-    if (strength >= 7) target = 1;
-    if (strength >= 11) target = 2;
-    if (strength >= 14) target = 3;
+  if (phase === 'call') {
+    let call = false;
+    if (difficulty === 'easy') call = strength >= 12;
+    else if (difficulty === 'normal') call = strength >= 9;
+    else call = strength >= 7;
+    return { type: 'bid', bid: call ? 1 : 0 };
   }
 
-  if (target <= current) return { type: 'bid', bid: 0 };
-  return { type: 'bid', bid: target as 1 | 2 | 3 };
+  if (phase === 'grab') {
+    let grab = false;
+    if (difficulty === 'easy') grab = strength >= 14;
+    else if (difficulty === 'normal') grab = strength >= 11;
+    else grab = strength >= 9;
+    return { type: 'bid', bid: grab ? 1 : 0 };
+  }
+
+  // 选分
+  let target: 1 | 2 | 3 = 1;
+  if (difficulty === 'easy') {
+    if (strength >= 12) target = 2;
+  } else if (difficulty === 'normal') {
+    if (strength >= 10) target = 2;
+    if (strength >= 15) target = 3;
+  } else {
+    if (strength >= 8) target = 2;
+    if (strength >= 13) target = 3;
+  }
+  return { type: 'bid', bid: target };
+}
+
+/** 加倍：手牌强则加倍/超加；地主更敢超加 */
+export function chooseDouble(state: GameState, seat: Seat, difficulty: AiDifficulty): AiAction {
+  const strength = handStrength(state.hands[seat]);
+  const isLandlord = state.landlord === seat;
+  let action: DoubleAction = 0;
+
+  if (difficulty === 'easy') {
+    if (strength >= 14) action = 1;
+    else if (strength >= 11 && Math.random() < 0.35) action = 1;
+  } else if (difficulty === 'normal') {
+    if (strength >= 16) action = isLandlord ? 2 : 1;
+    else if (strength >= 12) action = 1;
+    else if (strength >= 9 && Math.random() < 0.4) action = 1;
+  } else {
+    if (strength >= 14) action = 2;
+    else if (strength >= 11) action = 1;
+    else if (strength >= 8 && Math.random() < 0.45) action = 1;
+    if (isLandlord && strength >= 12 && action === 1 && Math.random() < 0.5) action = 2;
+  }
+
+  return { type: 'double', action };
 }
 
 export function choosePlay(state: GameState, seat: Seat, difficulty: AiDifficulty): AiAction {
@@ -248,6 +284,7 @@ function next(seat: Seat): Seat {
 
 export function chooseAction(state: GameState, seat: Seat, difficulty: AiDifficulty): AiAction {
   if (state.phase === 'bidding') return chooseBid(state, seat, difficulty);
+  if (state.phase === 'doubling') return chooseDouble(state, seat, difficulty);
   if (state.phase === 'playing') return choosePlay(state, seat, difficulty);
   return { type: 'pass' };
 }

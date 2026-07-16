@@ -8,13 +8,42 @@ import {
   sortCards,
 } from './cards';
 import { analyzePattern, canBeat, type Pattern } from './patterns';
-import { applyDelta, computeScoreDelta, INITIAL_SCORE, type ScoreDelta } from './score';
+import {
+  applyDelta,
+  computeDisplayMultiplier,
+  computeScoreDelta,
+  INITIAL_SCORE,
+  type DoubleFactors,
+  type ScoreDelta,
+} from './score';
 
-export type Phase = 'bidding' | 'playing' | 'settled' | 'redeal';
+export type Phase = 'bidding' | 'doubling' | 'playing' | 'settled' | 'redeal';
+
+/** 叫抢子阶段：先叫地主 → 再抢地主 → 地主选分 */
+export type BidPhase = 'call' | 'grab' | 'score';
 
 export type Seat = 0 | 1 | 2;
 
-export type BidAction = 0 | 1 | 2 | 3; // 0=不叫
+/**
+ * 协议动作：
+ * - call：0=不叫，1=叫地主
+ * - grab：0=不抢，1=抢地主
+ * - score：1|2|3=选分
+ */
+export type BidAction = 0 | 1 | 2 | 3;
+
+/**
+ * 座位叫抢展示记录：
+ * -1 未表态 · 0 不叫 · 1 叫地主 · 2 不抢 · 3 抢地主
+ */
+export type BidRecord = -1 | 0 | 1 | 2 | 3;
+
+/**
+ * 加倍动作 / 展示：
+ * -1 未表态 · 0 不加倍 · 1 加倍(×2) · 2 超级加倍(×4)
+ */
+export type DoubleAction = 0 | 1 | 2;
+export type DoubleRecord = -1 | 0 | 1 | 2;
 
 export type PublicTrick = {
   seat: Seat;
@@ -35,12 +64,22 @@ export type GameState = {
   turn: Seat;
   /** 叫抢起始座位 */
   bidStart: Seat;
-  /** 每人叫分记录，-1 未表态 */
-  bids: [number, number, number];
-  /** 叫抢轮次中最高分座位 */
+  /** 叫抢子阶段 */
+  bidPhase: BidPhase;
+  /** 每人叫抢记录，-1 未表态 */
+  bids: [BidRecord, BidRecord, BidRecord];
+  /** 当前地主候选人（叫/最后抢的人） */
   highestBidder: Seat | null;
+  /** 抢地主阶段待表态座位（按顺序） */
+  grabQueue: Seat[];
   /** 连续不叫计数（三人都不叫则重发） */
   passBidCount: number;
+  /** 每人加倍系数 1/2/4 */
+  doubles: DoubleFactors;
+  /** 每人加倍展示记录 */
+  doubleRecords: [DoubleRecord, DoubleRecord, DoubleRecord];
+  /** 加倍阶段待表态座位（农民先、地主后） */
+  doubleQueue: Seat[];
   /** 上一手有效出牌 */
   lastPattern: Pattern | null;
   lastPlaySeat: Seat | null;
@@ -66,8 +105,13 @@ export type ClientView = {
   scores: ScoreDelta;
   landlord: Seat | null;
   bidScore: number;
+  bidPhase: BidPhase;
   turn: Seat;
-  bids: [number, number, number];
+  bids: [BidRecord, BidRecord, BidRecord];
+  doubles: DoubleFactors;
+  doubleRecords: [DoubleRecord, DoubleRecord, DoubleRecord];
+  /** 当前总倍数（叫分×炸弹×加倍积） */
+  multiplier: number;
   lastPatternCards: Card[] | null;
   lastPlaySeat: Seat | null;
   passCount: number;
@@ -77,6 +121,29 @@ export type ClientView = {
   message: string;
   trickHistory: PublicTrick[];
 };
+
+/** UI / 语音：叫抢记录文案 */
+export function bidRecordLabel(record: number): string {
+  if (record === 0) return '不叫';
+  if (record === 1) return '叫地主';
+  if (record === 2) return '不抢';
+  if (record === 3) return '抢地主';
+  return '';
+}
+
+/** UI / 语音：加倍记录文案 */
+export function doubleRecordLabel(record: number): string {
+  if (record === 0) return '不加倍';
+  if (record === 1) return '加倍';
+  if (record === 2) return '超级加倍';
+  return '';
+}
+
+export function doubleFactorFromAction(action: DoubleAction): number {
+  if (action === 1) return 2;
+  if (action === 2) return 4;
+  return 1;
+}
 
 function rngDefault() {
   return Math.random();
@@ -98,9 +165,14 @@ export function createNewRound(scores: ScoreDelta, bidStart: Seat = 0, rng: () =
     bidScore: 0,
     turn: bidStart,
     bidStart,
+    bidPhase: 'call',
     bids: [-1, -1, -1],
     highestBidder: null,
+    grabQueue: [],
     passBidCount: 0,
+    doubles: [1, 1, 1],
+    doubleRecords: [-1, -1, -1],
+    doubleQueue: [],
     lastPattern: null,
     lastPlaySeat: null,
     passCount: 0,
@@ -110,7 +182,7 @@ export function createNewRound(scores: ScoreDelta, bidStart: Seat = 0, rng: () =
     farmersPlayed: false,
     winner: null,
     lastDelta: null,
-    message: `座位 ${bidStart + 1} 开始叫分`,
+    message: `座位 ${bidStart + 1} 开始叫地主`,
   };
 }
 
@@ -118,78 +190,182 @@ function nextSeat(seat: Seat): Seat {
   return ((seat + 1) % 3) as Seat;
 }
 
-function assignLandlord(state: GameState, seat: Seat): GameState {
+/** 选分后：发底牌 → 进入加倍（农民先、地主后） */
+function enterDoublingPhase(state: GameState, landlordSeat: Seat): GameState {
   const hands = state.hands.map((h) => [...h]) as [Card[], Card[], Card[]];
-  hands[seat] = sortCards([...hands[seat], ...state.bottom]);
+  hands[landlordSeat] = sortCards([...hands[landlordSeat], ...state.bottom]);
+  const farmerA = nextSeat(landlordSeat);
+  const farmerB = nextSeat(farmerA);
+  const doubleQueue: Seat[] = [farmerA, farmerB, landlordSeat];
   return {
     ...state,
-    phase: 'playing',
+    phase: 'doubling',
     hands,
-    landlord: seat,
+    landlord: landlordSeat,
     bottomRevealed: true,
-    turn: seat,
+    doubles: [1, 1, 1],
+    doubleRecords: [-1, -1, -1],
+    doubleQueue,
+    turn: farmerA,
     lastPattern: null,
     lastPlaySeat: null,
     passCount: 0,
-    message: `座位 ${seat + 1} 成为地主，出牌`,
+    message: `座位 ${landlordSeat + 1} 成为地主，加倍阶段：座位 ${farmerA + 1} 请选择`,
+  };
+}
+
+function enterPlayingPhase(state: GameState): GameState {
+  const landlord = state.landlord!;
+  return {
+    ...state,
+    phase: 'playing',
+    turn: landlord,
+    lastPattern: null,
+    lastPlaySeat: null,
+    passCount: 0,
+    message: `加倍结束，座位 ${landlord + 1}（地主）先出牌`,
+  };
+}
+
+function enterScorePhase(state: GameState, landlordSeat: Seat, bids: [BidRecord, BidRecord, BidRecord]): GameState {
+  return {
+    ...state,
+    bids,
+    bidPhase: 'score',
+    highestBidder: landlordSeat,
+    grabQueue: [],
+    turn: landlordSeat,
+    message: `座位 ${landlordSeat + 1} 成为地主，请选择分数`,
   };
 }
 
 export function applyBid(state: GameState, seat: Seat, bid: BidAction): GameState {
-  if (state.phase !== 'bidding') return { ...state, message: '当前不是叫分阶段' };
-  if (state.turn !== seat) return { ...state, message: '还没轮到你叫分' };
-  if (bid !== 0 && bid <= state.bidScore) {
-    return { ...state, message: `必须高于当前 ${state.bidScore} 分，或不叫` };
+  if (state.phase !== 'bidding') return { ...state, message: '当前不是叫抢阶段' };
+  if (state.turn !== seat) return { ...state, message: '还没轮到你' };
+
+  const bidPhase = state.bidPhase ?? 'call';
+
+  // —— 选分：仅地主候选人可选 1/2/3 ——
+  if (bidPhase === 'score') {
+    if (seat !== state.highestBidder) return { ...state, message: '只有地主可以选分' };
+    if (bid < 1 || bid > 3) return { ...state, message: '请选择 1 / 2 / 3 分' };
+    return enterDoublingPhase(
+      {
+        ...state,
+        bidScore: bid,
+        message: `座位 ${seat + 1} 选 ${bid} 分`,
+      },
+      seat,
+    );
   }
 
-  const bids = [...state.bids] as [number, number, number];
-  bids[seat] = bid;
+  // —— 叫地主 ——
+  if (bidPhase === 'call') {
+    if (bid !== 0 && bid !== 1) return { ...state, message: '请选择叫地主或不叫' };
 
-  let bidScore = state.bidScore;
-  let highestBidder = state.highestBidder;
-  let passBidCount = state.passBidCount;
+    const bids = [...state.bids] as [BidRecord, BidRecord, BidRecord];
+    bids[seat] = bid === 0 ? 0 : 1;
 
-  if (bid === 0) {
-    passBidCount += 1;
-  } else {
-    bidScore = bid;
-    highestBidder = seat;
-    passBidCount = 0;
-  }
+    if (bid === 1) {
+      // 有人叫：进入抢地主，后续两家按座位顺序表态
+      const grabQueue: Seat[] = [nextSeat(seat), nextSeat(nextSeat(seat))];
+      return {
+        ...state,
+        bids,
+        bidPhase: 'grab',
+        highestBidder: seat,
+        grabQueue,
+        passBidCount: 0,
+        turn: grabQueue[0]!,
+        message: `座位 ${seat + 1} 叫地主`,
+      };
+    }
 
-  // 叫 3 分直接当地主
-  if (bid === 3) {
-    return assignLandlord({ ...state, bids, bidScore, highestBidder, passBidCount }, seat);
-  }
+    const passBidCount = state.passBidCount + 1;
+    const allPassed = bids.every((b) => b === 0);
+    if (allPassed) {
+      return {
+        ...state,
+        phase: 'redeal',
+        bids,
+        bidScore: 0,
+        passBidCount,
+        highestBidder: null,
+        grabQueue: [],
+        message: '无人叫地主，重新发牌',
+      };
+    }
 
-  // 三人都不叫（本轮所有人都表态且最高仍为 0）
-  const allSpoke = bids.every((b) => b !== -1);
-  if (allSpoke && highestBidder === null) {
     return {
       ...state,
-      phase: 'redeal',
       bids,
-      bidScore: 0,
       passBidCount,
-      message: '无人叫分，重新发牌',
+      turn: nextSeat(seat),
+      message: `座位 ${seat + 1} 不叫`,
     };
   }
 
-  // 若已有人叫过分，且其余两人都“不叫/已表态且不高于”，结束叫抢
-  // 简化经典：每人最多表态一次（叫或不叫），三人轮完后最高分者当地主
-  if (allSpoke && highestBidder !== null) {
-    return assignLandlord({ ...state, bids, bidScore, highestBidder, passBidCount }, highestBidder);
+  // —— 抢地主 ——
+  if (bid !== 0 && bid !== 1) return { ...state, message: '请选择抢地主或不抢' };
+
+  const bids = [...state.bids] as [BidRecord, BidRecord, BidRecord];
+  bids[seat] = bid === 0 ? 2 : 3;
+
+  let highestBidder = state.highestBidder;
+  if (bid === 1) highestBidder = seat;
+
+  const grabQueue = state.grabQueue.filter((s) => s !== seat);
+  if (grabQueue.length === 0) {
+    const landlordSeat = highestBidder ?? seat;
+    return enterScorePhase({ ...state, highestBidder: landlordSeat }, landlordSeat, bids);
   }
 
-  const turn = nextSeat(seat);
   return {
     ...state,
     bids,
-    bidScore,
     highestBidder,
-    passBidCount,
-    turn,
-    message: bid === 0 ? `座位 ${seat + 1} 不叫` : `座位 ${seat + 1} 叫 ${bid} 分`,
+    grabQueue,
+    turn: grabQueue[0]!,
+    message: bid === 0 ? `座位 ${seat + 1} 不抢` : `座位 ${seat + 1} 抢地主`,
+  };
+}
+
+export function applyDouble(state: GameState, seat: Seat, action: DoubleAction): GameState {
+  if (state.phase !== 'doubling') return { ...state, message: '当前不是加倍阶段' };
+  if (state.turn !== seat) return { ...state, message: '还没轮到你加倍' };
+  if (action !== 0 && action !== 1 && action !== 2) {
+    return { ...state, message: '请选择不加倍 / 加倍 / 超级加倍' };
+  }
+
+  const doubles = [...(state.doubles ?? [1, 1, 1])] as DoubleFactors;
+  const doubleRecords = [...(state.doubleRecords ?? [-1, -1, -1])] as [
+    DoubleRecord,
+    DoubleRecord,
+    DoubleRecord,
+  ];
+  doubles[seat] = doubleFactorFromAction(action);
+  doubleRecords[seat] = action;
+
+  const label = doubleRecordLabel(action);
+  const doubleQueue = (state.doubleQueue ?? []).filter((s) => s !== seat);
+
+  if (doubleQueue.length === 0) {
+    return enterPlayingPhase({
+      ...state,
+      doubles,
+      doubleRecords,
+      doubleQueue: [],
+      message: `座位 ${seat + 1} ${label}`,
+    });
+  }
+
+  return {
+    ...state,
+    doubles,
+    doubleRecords,
+    doubleQueue,
+    turn: doubleQueue[0]!,
+    message: `座位 ${seat + 1} ${label}，下一位座位 ${doubleQueue[0]! + 1}`,
   };
 }
 
@@ -239,6 +415,7 @@ export function applyPlay(state: GameState, seat: Seat, cardIds: string[]): Game
       bombCount,
       spring: spring || antiSpring,
       landlordWin,
+      doubles: state.doubles ?? [1, 1, 1],
     });
 
     return {
@@ -307,6 +484,8 @@ export function applyPass(state: GameState, seat: Seat): GameState {
 }
 
 export function toClientView(state: GameState, mySeat: Seat): ClientView {
+  const doubles = state.doubles ?? [1, 1, 1];
+  const doubleRecords = state.doubleRecords ?? [-1, -1, -1];
   return {
     phase: state.phase,
     mySeat,
@@ -316,8 +495,16 @@ export function toClientView(state: GameState, mySeat: Seat): ClientView {
     scores: state.scores,
     landlord: state.landlord,
     bidScore: state.bidScore,
+    bidPhase: state.bidPhase ?? 'call',
     turn: state.turn,
     bids: state.bids,
+    doubles,
+    doubleRecords,
+    multiplier: computeDisplayMultiplier({
+      bidScore: state.bidScore,
+      bombCount: state.bombCount,
+      doubles,
+    }),
     lastPatternCards: state.lastPattern?.cards ?? null,
     lastPlaySeat: state.lastPlaySeat,
     passCount: state.passCount,

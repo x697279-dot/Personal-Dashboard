@@ -1,0 +1,15 @@
+斗地主背景音乐（Pixabay 免，多首轮播）
+
+目录：public/doudizhu/
+
+当前曲目（播完自动下一首，开启时随机起点）：
+  bgm-01-wonders-of-the-earth.mp3   — Grand_Project / Wonders of the Earth
+  bgm-02-moment-of-peace.mp3        — MickeysCat / Moment of Peace
+  bgm-03-no-copyright-music.mp3     — SigmaMusicArt / No Copyright Music
+  bgm-04-escape-your-love.mp3       — FASSounds / Escape Your Love
+  bgm-05-carnaval.mp3               — Alec_Koff / Carnaval
+  bgm.mp3                           — 与 01 相同（兼容旧路径）
+
+来源：Pixabay Music（免版税）。勿接网易云 / QQ 等流媒体接口。
+
+游戏内点「音乐开」后循环轮播；若全部缺失则回退轻柔 WebAudio 垫乐。

@@ -8,6 +8,7 @@ import os from 'node:os';
 import { WebSocketServer, type WebSocket } from 'ws';
 import {
   applyBid,
+  applyDouble,
   applyPass,
   applyPlay,
   createInitialScores,
@@ -330,6 +331,12 @@ wss.on('connection', (ws) => {
     if (msg.type === 'bid') {
       room.game = applyBid(room.game, seat, msg.bid);
       advanceRedeal(room);
+      broadcastState(room);
+      return;
+    }
+
+    if (msg.type === 'double') {
+      room.game = applyDouble(room.game, seat, msg.action);
       broadcastState(room);
       return;
     }

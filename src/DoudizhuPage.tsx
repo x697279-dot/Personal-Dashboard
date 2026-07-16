@@ -1,21 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { chooseAction, listLegalPlays, type AiDifficulty } from './doudizhu/ai/bot';
 import {
   applyBid,
+  applyDouble,
   applyPass,
   applyPlay,
+  bidRecordLabel,
   createInitialScores,
   createNewRound,
+  doubleRecordLabel,
   toClientView,
+  type DoubleAction,
   type GameState,
   type Seat,
 } from './doudizhu/engine/game';
 import { isRedSuit, type Card } from './doudizhu/engine/cards';
 import { analyzePattern, patternLabel } from './doudizhu/engine/patterns';
 import {
-  announceBid,
+  announceBidRecord,
+  announceDouble,
   announcePass,
   announcePlay,
+  announceScore,
+  getDdzBgmState,
+  skipDdzBgm,
+  subscribeDdzAudio,
+  toggleDdzBgm,
   unlockDdzAudio,
 } from './doudizhu/audio';
 import { connectDoudizhu, looksLikePrivateHost } from './doudizhu/net/client';
@@ -25,7 +35,7 @@ import type { ScoreDelta } from './doudizhu/engine/score';
 
 type Screen = 'menu' | 'solo-setup' | 'solo' | 'lan-setup' | 'lan';
 
-const TURN_SECONDS = 15;
+const TURN_SECONDS = 30;
 
 const AI_LABEL: Record<AiDifficulty, string> = {
   easy: '简单',
@@ -64,6 +74,54 @@ function PlayerAvatar({
       <img src={seatAvatar(seat, avatars)} alt="" draggable={false} />
       {landlord === seat ? <em className="ddz-avatar-crown" aria-hidden>👑</em> : null}
     </span>
+  );
+}
+
+function BgmPlayer({ className = '' }: { className?: string }) {
+  const [player, setPlayer] = useState(getDdzBgmState);
+  useEffect(() => subscribeDdzAudio(() => setPlayer(getDdzBgmState())), []);
+  return (
+    <div className={`ddz-music-player ${player.playing ? 'is-playing' : ''} ${className}`.trim()}>
+      <button
+        type="button"
+        className="ddz-music-skip"
+        aria-label="上一首"
+        title="上一首"
+        onClick={(e) => {
+          e.stopPropagation();
+          void skipDdzBgm(-1);
+        }}
+      >
+        ‹
+      </button>
+      <span className="ddz-music-title" title={player.title}>
+        {player.title}
+      </span>
+      <button
+        type="button"
+        className="ddz-music-play"
+        aria-label={player.playing ? '暂停' : '播放'}
+        title={player.playing ? '暂停' : '播放'}
+        onClick={(e) => {
+          e.stopPropagation();
+          void toggleDdzBgm();
+        }}
+      >
+        {player.playing ? 'Ⅱ' : '▶'}
+      </button>
+      <button
+        type="button"
+        className="ddz-music-skip"
+        aria-label="下一首"
+        title="下一首"
+        onClick={(e) => {
+          e.stopPropagation();
+          void skipDdzBgm(1);
+        }}
+      >
+        ›
+      </button>
+    </div>
   );
 }
 
@@ -125,19 +183,25 @@ function CardView({
   selected,
   onToggle,
   small,
+  selectable,
 }: {
   card: Card;
   selected?: boolean;
   onToggle?: () => void;
   small?: boolean;
+  /** 由父级手牌滑动多选接管时，保持可点外观但不走单独 click */
+  selectable?: boolean;
 }) {
   const red = isRedSuit(card.suit) || card.suit === 'J';
+  const interactive = Boolean(onToggle) || Boolean(selectable);
   return (
     <button
       type="button"
       className={`ddz-card ${red ? 'is-red' : 'is-black'} ${selected ? 'is-selected' : ''} ${small ? 'is-small' : ''}`}
       onClick={onToggle}
-      disabled={!onToggle}
+      disabled={!interactive}
+      data-card-id={card.id}
+      tabIndex={selectable && !onToggle ? -1 : undefined}
     >
       <span className="ddz-card-label">{card.label}</span>
       <span className="ddz-card-suit">
@@ -145,6 +209,38 @@ function CardView({
       </span>
     </button>
   );
+}
+
+/**
+ * 重叠手牌命中：优先 elementsFromPoint（适配微信 CSS 旋转横屏），
+ * 否则按屏幕坐标下牌心距离回退（拖选空隙时）。
+ */
+function cardIndexFromPoint(handEl: HTMLElement, clientX: number, clientY: number): number {
+  const cards = [...handEl.querySelectorAll<HTMLElement>('.ddz-card')];
+  if (!cards.length) return -1;
+
+  const stack = document.elementsFromPoint(clientX, clientY);
+  for (const node of stack) {
+    if (!(node instanceof Element)) continue;
+    const cardEl = node.closest('.ddz-card');
+    if (!cardEl || !handEl.contains(cardEl)) continue;
+    const idx = cards.indexOf(cardEl as HTMLElement);
+    if (idx >= 0) return idx;
+  }
+
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < cards.length; i += 1) {
+    const r = cards[i]!.getBoundingClientRect();
+    const cx = (r.left + r.right) / 2;
+    const cy = (r.top + r.bottom) / 2;
+    const d = (clientX - cx) ** 2 + (clientY - cy) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      best = i;
+    }
+  }
+  return best;
 }
 
 function PlayPile({
@@ -211,8 +307,9 @@ function TableView({
   names,
   avatars,
   selectedIds,
-  onToggleCard,
+  onSelectCards,
   onBid,
+  onDouble,
   onPlay,
   onPass,
   onHint,
@@ -226,8 +323,9 @@ function TableView({
   names?: [string, string, string];
   avatars?: [string, string, string];
   selectedIds: string[];
-  onToggleCard: (id: string) => void;
+  onSelectCards: (ids: string[]) => void;
   onBid: (bid: 0 | 1 | 2 | 3) => void;
+  onDouble: (action: DoubleAction) => void;
   onPlay: () => void;
   onPass: () => void;
   onHint: () => void;
@@ -243,10 +341,19 @@ function TableView({
   const actions = useMemo(() => latestActions(view.trickHistory), [view.trickHistory]);
   const [countdown, setCountdown] = useState(TURN_SECONDS);
   const timeoutFired = useRef(false);
-  const turnKey = `${view.phase}-${view.turn}-${view.trickHistory.length}`;
+  const handRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startIndex: number;
+    selectMode: boolean;
+    baseline: string[];
+  } | null>(null);
+  const turnKey = `${view.phase}-${view.turn}-${view.trickHistory.length}-${view.doubleRecords?.join(',') ?? ''}`;
+  const handSelectable = controlsEnabled;
+  const timedPhase = view.phase === 'bidding' || view.phase === 'doubling' || view.phase === 'playing';
 
   useEffect(() => {
-    if (view.phase !== 'bidding' && view.phase !== 'playing') {
+    if (!timedPhase) {
       setCountdown(0);
       return;
     }
@@ -262,15 +369,67 @@ function TableView({
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [turnKey, view.phase]);
+  }, [turnKey, timedPhase]);
 
   useEffect(() => {
     if (countdown !== 0) return;
-    if (view.phase !== 'bidding' && view.phase !== 'playing') return;
+    if (!timedPhase) return;
     if (!myTurn || !onTimeout || timeoutFired.current) return;
     timeoutFired.current = true;
     onTimeout();
-  }, [countdown, myTurn, onTimeout, view.phase]);
+  }, [countdown, myTurn, onTimeout, timedPhase]);
+
+  const applyHandRange = useCallback(
+    (from: number, to: number, selectMode: boolean, baseline: string[]) => {
+      const lo = Math.min(from, to);
+      const hi = Math.max(from, to);
+      const next = new Set(baseline);
+      for (let i = lo; i <= hi; i += 1) {
+        const id = view.hand[i]?.id;
+        if (!id) continue;
+        if (selectMode) next.add(id);
+        else next.delete(id);
+      }
+      onSelectCards([...next]);
+    },
+    [onSelectCards, view.hand],
+  );
+
+  const onHandPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!handSelectable || e.button !== 0) return;
+    const handEl = handRef.current;
+    if (!handEl) return;
+    const index = cardIndexFromPoint(handEl, e.clientX, e.clientY);
+    if (index < 0) return;
+    const startId = view.hand[index]?.id;
+    if (!startId) return;
+    e.preventDefault();
+    handEl.setPointerCapture(e.pointerId);
+    const baseline = [...selectedIds];
+    const selectMode = !baseline.includes(startId);
+    dragRef.current = { pointerId: e.pointerId, startIndex: index, selectMode, baseline };
+    applyHandRange(index, index, selectMode, baseline);
+  };
+
+  const onHandPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    const handEl = handRef.current;
+    if (!drag || !handEl || e.pointerId !== drag.pointerId) return;
+    const index = cardIndexFromPoint(handEl, e.clientX, e.clientY);
+    if (index < 0) return;
+    applyHandRange(drag.startIndex, index, drag.selectMode, drag.baseline);
+  };
+
+  const endHandDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    dragRef.current = null;
+    try {
+      handRef.current?.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+  };
 
   return (
     <div className="ddz-table">
@@ -285,6 +444,7 @@ function TableView({
           </div>
           <em>
             叫分 {view.bidScore || '-'} · 炸弹×{view.bombCount}
+            {view.bidScore > 0 ? ` · 倍数×${view.multiplier}` : ''}
           </em>
         </div>
       </div>
@@ -297,7 +457,10 @@ function TableView({
               <p>{seatName(left, names)}</p>
               <strong>{view.handCounts[left]} 张</strong>
               {view.phase === 'bidding' && view.bids[left] !== -1 ? (
-                <span className="ddz-bid-tag">{view.bids[left] === 0 ? '不叫' : `${view.bids[left]}分`}</span>
+                <span className="ddz-bid-tag">{bidRecordLabel(view.bids[left])}</span>
+              ) : null}
+              {view.phase === 'doubling' && (view.doubleRecords?.[left] ?? -1) !== -1 ? (
+                <span className="ddz-bid-tag ddz-double-tag">{doubleRecordLabel(view.doubleRecords[left])}</span>
               ) : null}
             </div>
           </div>
@@ -336,7 +499,10 @@ function TableView({
               <p>{seatName(right, names)}</p>
               <strong>{view.handCounts[right]} 张</strong>
               {view.phase === 'bidding' && view.bids[right] !== -1 ? (
-                <span className="ddz-bid-tag">{view.bids[right] === 0 ? '不叫' : `${view.bids[right]}分`}</span>
+                <span className="ddz-bid-tag">{bidRecordLabel(view.bids[right])}</span>
+              ) : null}
+              {view.phase === 'doubling' && (view.doubleRecords?.[right] ?? -1) !== -1 ? (
+                <span className="ddz-bid-tag ddz-double-tag">{doubleRecordLabel(view.doubleRecords[right])}</span>
               ) : null}
             </div>
           </div>
@@ -360,34 +526,56 @@ function TableView({
           />
         </div>
 
-        <div className="ddz-hand">
-          {view.hand.map((card) => (
-            <CardView
-              key={card.id}
-              card={card}
-              selected={selectedIds.includes(card.id)}
-              onToggle={controlsEnabled ? () => onToggleCard(card.id) : undefined}
-            />
-          ))}
-        </div>
-
         <div className="ddz-actions">
           {view.phase === 'bidding' && myTurn ? (
-            <>
-              <button type="button" className="ddz-btn ddz-btn-ghost" onClick={() => onBid(0)}>
-                不叫
-              </button>
-              {([1, 2, 3] as const).map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  className="ddz-btn ddz-btn-bid"
-                  disabled={b <= view.bidScore}
-                  onClick={() => onBid(b)}
-                >
-                  {b} 分
+            view.bidPhase === 'score' ? (
+              <>
+                {([1, 2, 3] as const).map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    className="ddz-btn ddz-btn-bid"
+                    onClick={() => onBid(b)}
+                  >
+                    {b} 分
+                  </button>
+                ))}
+              </>
+            ) : view.bidPhase === 'grab' ? (
+              <>
+                <button type="button" className="ddz-btn ddz-btn-ghost" onClick={() => onBid(0)}>
+                  不抢
                 </button>
-              ))}
+                <button type="button" className="ddz-btn ddz-btn-bid" onClick={() => onBid(1)}>
+                  抢地主
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="ddz-btn ddz-btn-ghost" onClick={() => onBid(0)}>
+                  不叫
+                </button>
+                <button type="button" className="ddz-btn ddz-btn-bid" onClick={() => onBid(1)}>
+                  叫地主
+                </button>
+              </>
+            )
+          ) : null}
+
+          {view.phase === 'doubling' && myTurn ? (
+            <>
+              <button type="button" className="ddz-btn ddz-btn-ghost" onClick={() => onDouble(0)}>
+                不加倍
+              </button>
+              <span className="ddz-action-timer" aria-live="polite">
+                {countdown}s
+              </span>
+              <button type="button" className="ddz-btn ddz-btn-bid" onClick={() => onDouble(1)}>
+                加倍
+              </button>
+              <button type="button" className="ddz-btn ddz-btn-super" onClick={() => onDouble(2)}>
+                超级加倍
+              </button>
             </>
           ) : null}
 
@@ -395,22 +583,25 @@ function TableView({
             <>
               <button
                 type="button"
-                className="ddz-btn ddz-btn-play"
-                onClick={onPlay}
-                disabled={!selectedIds.length}
-              >
-                出牌
-              </button>
-              <button type="button" className="ddz-btn ddz-btn-hint" onClick={onHint}>
-                提示出牌
-              </button>
-              <button
-                type="button"
                 className="ddz-btn ddz-btn-pass"
                 onClick={onPass}
                 disabled={!view.lastPatternCards}
               >
                 不出
+              </button>
+              <span className="ddz-action-timer" aria-live="polite">
+                {countdown}s
+              </span>
+              <button type="button" className="ddz-btn ddz-btn-hint" onClick={onHint}>
+                提示
+              </button>
+              <button
+                type="button"
+                className="ddz-btn ddz-btn-play"
+                onClick={onPlay}
+                disabled={!selectedIds.length}
+              >
+                出牌
               </button>
             </>
           ) : null}
@@ -426,6 +617,24 @@ function TableView({
               <p className="ddz-muted">等待房主开下一局…</p>
             )
           ) : null}
+        </div>
+
+        <div
+          className={`ddz-hand ${handSelectable ? 'is-selectable' : ''}`}
+          ref={handRef}
+          onPointerDown={onHandPointerDown}
+          onPointerMove={onHandPointerMove}
+          onPointerUp={endHandDrag}
+          onPointerCancel={endHandDrag}
+        >
+          {view.hand.map((card) => (
+            <CardView
+              key={card.id}
+              card={card}
+              selected={selectedIds.includes(card.id)}
+              selectable={handSelectable}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -475,7 +684,10 @@ function DoudizhuPage() {
   /** 只执行当前 AI 的一步，便于轮流展示 */
   const stepAiOnce = useCallback(
     (state: GameState): GameState => {
-      if ((state.phase !== 'bidding' && state.phase !== 'playing') || state.turn === 0) {
+      if (
+        (state.phase !== 'bidding' && state.phase !== 'doubling' && state.phase !== 'playing') ||
+        state.turn === 0
+      ) {
         return state;
       }
       const seat = state.turn;
@@ -484,9 +696,11 @@ function DoudizhuPage() {
       let cur =
         action.type === 'bid'
           ? applyBid(state, seat, action.bid)
-          : action.type === 'pass'
-            ? applyPass(state, seat)
-            : applyPlay(state, seat, action.cardIds);
+          : action.type === 'double'
+            ? applyDouble(state, seat, action.action)
+            : action.type === 'pass'
+              ? applyPass(state, seat)
+              : applyPlay(state, seat, action.cardIds);
 
       if (cur.phase === 'redeal') {
         cur = createNewRound(cur.scores, ((cur.bidStart + 1) % 3) as Seat);
@@ -498,14 +712,16 @@ function DoudizhuPage() {
 
   useEffect(() => {
     if (screen !== 'solo' || !soloState) return;
-    if (soloState.phase !== 'bidding' && soloState.phase !== 'playing') return;
+    if (soloState.phase !== 'bidding' && soloState.phase !== 'doubling' && soloState.phase !== 'playing') {
+      return;
+    }
     if (soloState.turn === 0) return;
     if (soloBusy.current) return;
     soloBusy.current = true;
     const timer = window.setTimeout(() => {
       setSoloState((prev) => {
         if (!prev || prev.turn === 0) return prev;
-        if (prev.phase !== 'bidding' && prev.phase !== 'playing') return prev;
+        if (prev.phase !== 'bidding' && prev.phase !== 'doubling' && prev.phase !== 'playing') return prev;
         return stepAiOnce(prev);
       });
       soloBusy.current = false;
@@ -534,10 +750,6 @@ function DoudizhuPage() {
     setSoloState(cur);
     setSelectedIds([]);
     setHintTip('');
-  };
-
-  const toggleCard = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const connectLan = () => {
@@ -636,6 +848,9 @@ function DoudizhuPage() {
 
   const announceKeyRef = useRef('');
   const prevBidsRef = useRef<[number, number, number]>([-1, -1, -1]);
+  const prevDoublesRef = useRef<[number, number, number]>([-1, -1, -1]);
+  const prevBidScoreRef = useRef(0);
+  const prevPhaseRef = useRef<string | null>(null);
   const activeView = screen === 'solo' ? soloView : screen === 'lan' ? lanView : null;
 
   useEffect(() => {
@@ -658,21 +873,50 @@ function DoudizhuPage() {
   }, [activeView?.trickHistory, activeView]);
 
   useEffect(() => {
-    if (!activeView || activeView.phase !== 'bidding') {
-      prevBidsRef.current = [-1, -1, -1];
-      return;
-    }
-    const bids = activeView.bids;
-    for (let i = 0; i < 3; i += 1) {
-      const now = bids[i as Seat];
-      const was = prevBidsRef.current[i]!;
-      if (now >= 0 && now !== was) {
-        void unlockDdzAudio();
-        announceBid(now as 0 | 1 | 2 | 3);
+    if (!activeView) return;
+
+    if (activeView.phase === 'bidding') {
+      const bids = activeView.bids;
+      for (let i = 0; i < 3; i += 1) {
+        const now = bids[i as Seat];
+        const was = prevBidsRef.current[i]!;
+        if (now >= 0 && now !== was) {
+          void unlockDdzAudio();
+          announceBidRecord(now as 0 | 1 | 2 | 3);
+        }
       }
+      prevBidsRef.current = [bids[0], bids[1], bids[2]];
+    } else {
+      prevBidsRef.current = [-1, -1, -1];
     }
-    prevBidsRef.current = [bids[0], bids[1], bids[2]];
-  }, [activeView?.bids, activeView?.phase, activeView]);
+
+    if (activeView.phase === 'doubling' || (prevPhaseRef.current === 'doubling' && activeView.phase === 'playing')) {
+      const records = activeView.doubleRecords ?? [-1, -1, -1];
+      for (let i = 0; i < 3; i += 1) {
+        const now = records[i as Seat];
+        const was = prevDoublesRef.current[i]!;
+        if (now >= 0 && now !== was) {
+          void unlockDdzAudio();
+          announceDouble(now as 0 | 1 | 2);
+        }
+      }
+      prevDoublesRef.current = [records[0], records[1], records[2]];
+    } else if (activeView.phase === 'bidding') {
+      prevDoublesRef.current = [-1, -1, -1];
+    }
+
+    // 选分后进入加倍：上一帧仍是 bidding 时播报选分
+    if (
+      activeView.bidScore > 0 &&
+      activeView.bidScore !== prevBidScoreRef.current &&
+      prevPhaseRef.current === 'bidding'
+    ) {
+      void unlockDdzAudio();
+      announceScore(activeView.bidScore as 1 | 2 | 3);
+    }
+    prevBidScoreRef.current = activeView.bidScore;
+    prevPhaseRef.current = activeView.phase;
+  }, [activeView?.bids, activeView?.doubleRecords, activeView?.bidScore, activeView?.phase, activeView]);
 
   const [mobileTable, setMobileTable] = useState(false);
   const [wechatPortrait, setWechatPortrait] = useState(false);
@@ -708,13 +952,14 @@ function DoudizhuPage() {
         <button type="button" className="ddz-back" onClick={() => { window.location.hash = '#/'; }}>
           返回主页
         </button>
+        <BgmPlayer className="ddz-bgm-float" />
         <section className="ddz-hero">
           <p className="ddz-kicker">DOU DIZHU · CAPYLULU</p>
           <h1>
             <span>斗地主</span>
             <span>双模式开打</span>
           </h1>
-          <p className="ddz-subtitle">标准叫抢与牌型 · 初始积分 100 · 可负分 · 单机多档 AI / 联机三人同房</p>
+          <p className="ddz-subtitle">标准叫抢选分 · 加倍/超级加倍 · 初始积分 100 · 单机多档 AI / 联机三人同房</p>
           <div className="ddz-mode-grid">
             <button type="button" className="ddz-mode-card ddz-mode-solo" onClick={() => setScreen('solo-setup')}>
               <span className="ddz-mode-badge">SOLO</span>
@@ -876,6 +1121,7 @@ function DoudizhuPage() {
             退出
           </button>
           <div className="ddz-topbar-right">
+            <BgmPlayer />
             <span>
               AI {AI_LABEL[aiDiffs[0]]}/{AI_LABEL[aiDiffs[1]]}
             </span>
@@ -886,17 +1132,23 @@ function DoudizhuPage() {
           names={['你', `电脑A(${AI_LABEL[aiDiffs[0]]})`, `电脑B(${AI_LABEL[aiDiffs[1]]})`]}
           avatars={DEFAULT_AVATARS}
           selectedIds={selectedIds}
-          onToggleCard={toggleCard}
+          onSelectCards={setSelectedIds}
           controlsEnabled
           hintTip={hintTip}
           onHint={() => applyHint(soloView)}
           onBid={(bid) => soloState && patchSolo(applyBid(soloState, 0, bid))}
+          onDouble={(action) => soloState && patchSolo(applyDouble(soloState, 0, action))}
           onPlay={() => soloState && patchSolo(applyPlay(soloState, 0, selectedIds))}
           onPass={() => soloState && patchSolo(applyPass(soloState, 0))}
           onTimeout={() => {
             if (!soloState || soloState.turn !== 0) return;
             if (soloState.phase === 'bidding') {
-              patchSolo(applyBid(soloState, 0, 0));
+              const autoBid = soloState.bidPhase === 'score' ? 1 : 0;
+              patchSolo(applyBid(soloState, 0, autoBid));
+              return;
+            }
+            if (soloState.phase === 'doubling') {
+              patchSolo(applyDouble(soloState, 0, 0));
               return;
             }
             if (soloState.phase === 'playing') {
@@ -959,6 +1211,7 @@ function DoudizhuPage() {
             断开
           </button>
           <div className="ddz-topbar-right">
+            <BgmPlayer />
             <span>{lanRoom ? `房间 ${lanRoom}` : ''}</span>
             {lanMsg ? <span>{lanMsg}</span> : null}
           </div>
@@ -1086,17 +1339,23 @@ function DoudizhuPage() {
             names={lanNames}
             avatars={DEFAULT_AVATARS}
             selectedIds={selectedIds}
-            onToggleCard={toggleCard}
+            onSelectCards={setSelectedIds}
             controlsEnabled
             hintTip={hintTip}
             onHint={() => applyHint(lanView)}
             onBid={(bid) => socketRef.current?.send({ type: 'bid', bid })}
+            onDouble={(action) => socketRef.current?.send({ type: 'double', action })}
             onPlay={() => socketRef.current?.send({ type: 'play', cardIds: selectedIds })}
             onPass={() => socketRef.current?.send({ type: 'pass' })}
             onTimeout={() => {
               if (!lanView || lanView.turn !== lanView.mySeat) return;
               if (lanView.phase === 'bidding') {
-                socketRef.current?.send({ type: 'bid', bid: 0 });
+                const autoBid = lanView.bidPhase === 'score' ? 1 : 0;
+                socketRef.current?.send({ type: 'bid', bid: autoBid });
+                return;
+              }
+              if (lanView.phase === 'doubling') {
+                socketRef.current?.send({ type: 'double', action: 0 });
                 return;
               }
               if (lanView.phase === 'playing') {

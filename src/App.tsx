@@ -4,6 +4,7 @@ import { DoudizhuPage } from './DoudizhuPage';
 import { GamePage } from './GamePage';
 import { MinesweeperGamePage } from './MinesweeperGamePage';
 import { PlatformerGamePage } from './PlatformerGamePage';
+import { scrollToTop } from './scrollToTop';
 import { SpiderSolitairePage } from './SpiderSolitairePage';
 import { WastelandSurvivorPage } from './WastelandSurvivorPage';
 
@@ -127,6 +128,8 @@ function HomePage() {
   const startGame = (game: GameEntry) => {
     if (startingGame) return;
     setStartingGame(game);
+    // Clear home-page scroll before hash swap so the next view does not open mid-page.
+    scrollToTop();
 
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
@@ -238,10 +241,29 @@ function App() {
   const [route, setRoute] = useState(() => window.location.hash || '#/');
 
   useEffect(() => {
-    const handleHashChange = () => setRoute(window.location.hash || '#/');
+    const handleHashChange = () => {
+      const next = window.location.hash || '#/';
+      setRoute(next);
+      // Hash SPA navigation preserves window scroll; reset for every route enter.
+      scrollToTop(
+        next === '#/game/minesweeper'
+          ? ['.mines-page']
+          : next === '#/game/spider'
+            ? ['.spider-page']
+            : [],
+      );
+    };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  useEffect(() => {
+    if (route === '#/game/minesweeper') {
+      scrollToTop(['.mines-page']);
+    } else if (route === '#/game/spider') {
+      scrollToTop(['.spider-page']);
+    }
+  }, [route]);
 
   if (route === '#/game') return <GamePage />;
   if (route === '#/game/airplane') return <AirplaneGamePage />;

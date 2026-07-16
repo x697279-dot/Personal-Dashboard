@@ -1,6 +1,18 @@
-import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { scrollToTop } from './scrollToTop';
 
 type DifficultyId = 'easy' | 'hard' | 'extreme';
+
+const LONG_PRESS_MS = 450;
+const LONG_PRESS_MOVE_PX = 14;
 
 type Cell = {
   mine: boolean;
@@ -177,9 +189,77 @@ function MinesweeperGamePage() {
   const [flagsLeft, setFlagsLeft] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [revealedPulse, setRevealedPulse] = useState<string | null>(null);
-  const longPressRef = useRef<{ timer: number | null; armed: boolean }>({ timer: null, armed: false });
+  const [flagMode, setFlagMode] = useState(false);
+  const longPressRef = useRef<{
+    timer: number | null;
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    cellKey: string | null;
+    didFlag: boolean;
+    suppressClick: boolean;
+  }>({
+    timer: null,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    cellKey: null,
+    didFlag: false,
+    suppressClick: false,
+  });
 
   const difficulty = selected;
+  const boardShellRef = useRef<HTMLDivElement>(null);
+  const [mobilePlay, setMobilePlay] = useState(false);
+
+  useEffect(() => {
+    const syncMobileLayout = () => {
+      const inMatch = Boolean(difficulty);
+      const isPhone =
+        /Mobi|Android|iPhone|iPod|MicroMessenger/i.test(navigator.userAgent) ||
+        Math.min(window.innerWidth, window.innerHeight) <= 520;
+      setMobilePlay(inMatch && isPhone);
+      // 清掉旧版残留的旋转 class，避免微信里整页消失
+      document.documentElement.classList.remove('mines-wechat-landscape');
+    };
+    syncMobileLayout();
+    window.addEventListener('resize', syncMobileLayout);
+    window.addEventListener('orientationchange', syncMobileLayout);
+    return () => {
+      document.documentElement.classList.remove('mines-wechat-landscape');
+      window.removeEventListener('resize', syncMobileLayout);
+      window.removeEventListener('orientationchange', syncMobileLayout);
+    };
+  }, [difficulty]);
+
+  useEffect(() => {
+    const shell = boardShellRef.current;
+    if (!shell || !difficulty) return;
+    const applySize = () => {
+      const style = window.getComputedStyle(shell);
+      const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+      const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+      const rect = shell.getBoundingClientRect();
+      const contentW = Math.max(0, rect.width - padX);
+      const contentH = Math.max(0, rect.height - padY);
+      const vw = document.documentElement.clientWidth || window.innerWidth;
+      // 严格不超过可视宽度，避免壳子出现左右滚动条
+      const maxByViewport = Math.max(120, vw - (mobilePlay ? 28 : 48));
+      const side = Math.max(
+        120,
+        Math.floor(Math.min(contentW || maxByViewport, maxByViewport, contentH > 40 ? contentH : maxByViewport)),
+      );
+      shell.style.setProperty('--board-side', `${side}px`);
+    };
+    applySize();
+    const ro = new ResizeObserver(() => applySize());
+    ro.observe(shell);
+    window.addEventListener('resize', applySize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', applySize);
+    };
+  }, [difficulty, mobilePlay]);
 
   const resetGame = useCallback((diff: Difficulty) => {
     setBoard(createEmptyBoard(diff.rows, diff.cols));
@@ -187,12 +267,19 @@ function MinesweeperGamePage() {
     setFlagsLeft(diff.mines);
     setElapsed(0);
     setRevealedPulse(null);
+    setFlagMode(false);
   }, []);
 
   const startDifficulty = (diff: Difficulty) => {
     setSelected(diff);
     resetGame(diff);
+    scrollToTop(['.mines-page']);
   };
+
+  // Level-select enter + difficulty switch: reset window and page container scroll.
+  useEffect(() => {
+    scrollToTop(['.mines-page']);
+  }, [difficulty]);
 
   useEffect(() => {
     if (!difficulty || status !== 'playing') return;
@@ -211,11 +298,18 @@ function MinesweeperGamePage() {
     return difficulty.rows * difficulty.cols - difficulty.mines - revealed;
   }, [board, difficulty]);
 
-  const clearLongPress = () => {
+  const clearLongPressTimer = () => {
     if (longPressRef.current.timer !== null) {
       window.clearTimeout(longPressRef.current.timer);
       longPressRef.current.timer = null;
     }
+  };
+
+  const resetLongPressTracking = () => {
+    clearLongPressTimer();
+    longPressRef.current.pointerId = null;
+    longPressRef.current.cellKey = null;
+    longPressRef.current.didFlag = false;
   };
 
   const toggleFlag = (r: number, c: number) => {
@@ -224,9 +318,13 @@ function MinesweeperGamePage() {
       const next = cloneBoard(prev);
       const cell = next[r]![c]!;
       if (cell.revealed) return prev;
-      if (!cell.flagged && flagsLeft <= 0) return prev;
+      const flaggedCount = next.reduce(
+        (sum, row) => sum + row.reduce((rowSum, item) => rowSum + (item.flagged ? 1 : 0), 0),
+        0,
+      );
+      if (!cell.flagged && flaggedCount >= difficulty.mines) return prev;
       cell.flagged = !cell.flagged;
-      setFlagsLeft((count) => count + (cell.flagged ? -1 : 1));
+      setFlagsLeft(difficulty.mines - flaggedCount - (cell.flagged ? 1 : -1));
       if (status === 'ready') setStatus('playing');
       return next;
     });
@@ -280,8 +378,13 @@ function MinesweeperGamePage() {
   };
 
   const handleCellClick = (r: number, c: number) => {
-    if (longPressRef.current.armed) {
-      longPressRef.current.armed = false;
+    if (longPressRef.current.suppressClick || longPressRef.current.didFlag) {
+      longPressRef.current.suppressClick = false;
+      longPressRef.current.didFlag = false;
+      return;
+    }
+    if (mobilePlay && flagMode) {
+      toggleFlag(r, c);
       return;
     }
     revealCell(r, c);
@@ -289,19 +392,61 @@ function MinesweeperGamePage() {
 
   const handleContextMenu = (event: MouseEvent, r: number, c: number) => {
     event.preventDefault();
+    // 移动端插旗模式已用点击处理；长按已插旗时避免 contextmenu 再拨一次
+    if (mobilePlay && flagMode) return;
+    if (longPressRef.current.didFlag || longPressRef.current.suppressClick) return;
     toggleFlag(r, c);
   };
 
-  const handlePointerDown = (r: number, c: number) => {
-    clearLongPress();
-    longPressRef.current.armed = false;
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>, r: number, c: number) => {
+    // 桌面鼠标走右键；触摸/触控笔用长按（插旗模式下点按即可，无需长按）
+    if (event.pointerType === 'mouse' || (mobilePlay && flagMode)) {
+      resetLongPressTracking();
+      return;
+    }
+
+    clearLongPressTimer();
+    longPressRef.current.pointerId = event.pointerId;
+    longPressRef.current.startX = event.clientX;
+    longPressRef.current.startY = event.clientY;
+    longPressRef.current.cellKey = `${r}-${c}`;
+    longPressRef.current.didFlag = false;
+    longPressRef.current.suppressClick = false;
+
     longPressRef.current.timer = window.setTimeout(() => {
-      longPressRef.current.armed = true;
+      longPressRef.current.timer = null;
+      longPressRef.current.didFlag = true;
+      longPressRef.current.suppressClick = true;
       toggleFlag(r, c);
-    }, 420);
+      try {
+        if (typeof navigator.vibrate === 'function') navigator.vibrate(12);
+      } catch {
+        // ignore
+      }
+    }, LONG_PRESS_MS);
   };
 
-  const handlePointerUp = () => clearLongPress();
+  const handlePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const lp = longPressRef.current;
+    if (lp.pointerId !== event.pointerId || lp.timer === null) return;
+    const dx = event.clientX - lp.startX;
+    const dy = event.clientY - lp.startY;
+    if (dx * dx + dy * dy > LONG_PRESS_MOVE_PX * LONG_PRESS_MOVE_PX) {
+      clearLongPressTimer();
+    }
+  };
+
+  const handlePointerEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (
+      longPressRef.current.pointerId !== null &&
+      event.pointerId !== longPressRef.current.pointerId
+    ) {
+      return;
+    }
+    clearLongPressTimer();
+    longPressRef.current.pointerId = null;
+    longPressRef.current.cellKey = null;
+  };
 
   if (!difficulty) {
     return (
@@ -356,11 +501,12 @@ function MinesweeperGamePage() {
     );
   }
 
-  const cellSize =
-    difficulty.id === 'easy' ? 'minmax(36px, 1fr)' : difficulty.id === 'hard' ? 'minmax(26px, 1fr)' : 'minmax(18px, 1fr)';
+  const cellSize = 'minmax(0, 1fr)';
 
   return (
-    <div className={`mines-page mines-playing mines-theme-${difficulty.accent}`}>
+    <div
+      className={`mines-page mines-playing mines-theme-${difficulty.accent}${mobilePlay ? ' is-mobile-play' : ''}`}
+    >
       <div className="mines-orb mines-orb-a" />
       <div className="mines-orb mines-orb-b" />
 
@@ -386,6 +532,26 @@ function MinesweeperGamePage() {
         </div>
 
         <div className="mines-hud-actions">
+          {mobilePlay ? (
+            <div className="mines-mode-switch" role="group" aria-label="操作模式">
+              <button
+                type="button"
+                className={`mines-ghost-button mines-mode-btn${!flagMode ? ' is-active' : ''}`}
+                aria-pressed={!flagMode}
+                onClick={() => setFlagMode(false)}
+              >
+                翻开
+              </button>
+              <button
+                type="button"
+                className={`mines-ghost-button mines-mode-btn is-flag${flagMode ? ' is-active' : ''}`}
+                aria-pressed={flagMode}
+                onClick={() => setFlagMode(true)}
+              >
+                插旗
+              </button>
+            </div>
+          ) : null}
           <button type="button" className="mines-ghost-button" onClick={() => resetGame(difficulty)}>
             重开
           </button>
@@ -404,12 +570,20 @@ function MinesweeperGamePage() {
         </div>
       </header>
 
-      <div className="mines-board-shell">
+      <div className="mines-board-shell" ref={boardShellRef}>
         <div
           className={`mines-board mines-board-${difficulty.id}`}
           style={{
             gridTemplateColumns: `repeat(${difficulty.cols}, ${cellSize})`,
             gridTemplateRows: `repeat(${difficulty.rows}, ${cellSize})`,
+            ...(mobilePlay
+              ? {
+                  width: '100%',
+                  maxWidth: '100%',
+                  height: 'auto',
+                  aspectRatio: '1',
+                }
+              : {}),
           }}
           role="grid"
           aria-label={`${difficulty.label}扫雷棋盘`}
@@ -450,10 +624,10 @@ function MinesweeperGamePage() {
                   disabled={status === 'won' || status === 'lost'}
                   onClick={() => handleCellClick(r, c)}
                   onContextMenu={(event) => handleContextMenu(event, r, c)}
-                  onPointerDown={() => handlePointerDown(r, c)}
-                  onPointerUp={handlePointerUp}
-                  onPointerLeave={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
+                  onPointerDown={(event) => handlePointerDown(event, r, c)}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerEnd}
+                  onPointerCancel={handlePointerEnd}
                 >
                   {cell.flagged && !cell.revealed ? <span className="mines-flag" /> : null}
                   {cell.revealed && cell.mine ? <span className="mines-bomb" /> : null}
@@ -465,7 +639,13 @@ function MinesweeperGamePage() {
         </div>
       </div>
 
-      <p className="mines-tip">左键翻开 · 右键/长按插旗 · 第一下保证安全</p>
+      <p className="mines-tip">
+        {mobilePlay
+          ? flagMode
+            ? '点击格子插旗'
+            : '点击格子翻开'
+          : '左键翻开 · 右键插旗 · 第一下保证安全'}
+      </p>
 
       {status === 'won' || status === 'lost' ? (
         <div className="mines-result-overlay" role="dialog" aria-modal="true">

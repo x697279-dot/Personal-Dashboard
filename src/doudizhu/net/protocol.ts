@@ -22,7 +22,10 @@ export type ClientToServer =
   | { type: 'requestSwap'; targetSeat: Seat }
   | { type: 'respondSwap'; fromSeat: Seat; accept: boolean }
   | { type: 'start' }
+  /** call: 0不叫/1叫地主；grab: 0不抢/1抢地主；score: 1|2|3分 */
   | { type: 'bid'; bid: 0 | 1 | 2 | 3 }
+  /** 0不加倍 / 1加倍(×2) / 2超级加倍(×4) */
+  | { type: 'double'; action: 0 | 1 | 2 }
   | { type: 'play'; cardIds: string[] }
   | { type: 'pass' }
   | { type: 'nextRound' }

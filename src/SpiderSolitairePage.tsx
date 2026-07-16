@@ -1,4 +1,5 @@
-import { type DragEvent, useCallback, useMemo, useRef, useState } from 'react';
+import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { scrollToTop } from './scrollToTop';
 
 type Suit = 'S' | 'H' | 'D' | 'C';
 type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
@@ -220,6 +221,29 @@ function SpiderSolitairePage() {
 
   const difficulty = selectedDiff;
   const stockDeals = Math.floor(stock.length / 10);
+  const [mobilePlay, setMobilePlay] = useState(false);
+
+  useEffect(() => {
+    const syncMobileLayout = () => {
+      const inMatch = Boolean(difficulty);
+      const isPhone =
+        /Mobi|Android|iPhone|iPod|MicroMessenger/i.test(navigator.userAgent) ||
+        Math.min(window.innerWidth, window.innerHeight) <= 520;
+      setMobilePlay(inMatch && isPhone);
+      document.documentElement.classList.remove('spider-wechat-landscape');
+    };
+    syncMobileLayout();
+    window.addEventListener('resize', syncMobileLayout);
+    window.addEventListener('orientationchange', syncMobileLayout);
+    return () => {
+      document.documentElement.classList.remove('spider-wechat-landscape');
+      window.removeEventListener('resize', syncMobileLayout);
+      window.removeEventListener('orientationchange', syncMobileLayout);
+    };
+  }, [difficulty]);
+
+  const faceUpStep = mobilePlay ? 14 : 22;
+  const faceDownStep = mobilePlay ? 8 : 12;
 
   const startGame = (diff: Difficulty) => {
     const snapshot = dealNewGame(diff.suits);
@@ -233,7 +257,13 @@ function SpiderSolitairePage() {
     setHistory([]);
     setStatus('playing');
     setDragOverCol(null);
+    scrollToTop(['.spider-page']);
   };
+
+  // Level-select enter + difficulty switch: reset window and page container scroll.
+  useEffect(() => {
+    scrollToTop(['.spider-page']);
+  }, [difficulty]);
 
   const pushHistory = useCallback(() => {
     setHistory((prev) => [
@@ -470,7 +500,9 @@ function SpiderSolitairePage() {
   }
 
   return (
-    <div className={`spider-page spider-playing spider-theme-${difficulty.accent}`}>
+    <div
+      className={`spider-page spider-playing spider-theme-${difficulty.accent}${mobilePlay ? ' is-mobile-play' : ''}`}
+    >
       <div className="spider-felt-glow" />
 
       <header className="spider-hud">
@@ -577,7 +609,7 @@ function SpiderSolitairePage() {
                 ) : null}
                 {col.map((card, cardIndex) => {
                   const selected = selectedIds.has(card.id);
-                  const offset = cardIndex * (card.faceUp ? 22 : 12);
+                  const offset = cardIndex * (card.faceUp ? faceUpStep : faceDownStep);
                   const canDrag = card.faceUp && isSameSuitRun(col, cardIndex) && status !== 'won';
                   return (
                     <button
