@@ -18,6 +18,18 @@ import {
   type Seat,
 } from '../src/doudizhu/engine/game';
 import { DOUDIZHU_DEFAULT_PORT, type ClientToServer, type ServerToClient } from '../src/doudizhu/net/protocol';
+import {
+  handleGomokuClose,
+  handleGomokuJoin,
+  handleGomokuMessage,
+  isGomokuJoin,
+} from './gomoku-rooms';
+import {
+  handleFlyingClose,
+  handleFlyingJoin,
+  handleFlyingMessage,
+  isFlyingJoin,
+} from './flying-rooms';
 
 const PORT = Number(process.env.PORT) || Number(process.env.DOUDIZHU_PORT) || DOUDIZHU_DEFAULT_PORT;
 
@@ -140,24 +152,47 @@ function advanceRedeal(room: Room) {
 
 const server = http.createServer((_req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-  res.end('doudizhu websocket ok');
+  res.end('capylulu websocket ok · doudizhu + gomoku + flying');
 });
 
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
   let joinedRoomId: string | null = null;
+  let mode: 'none' | 'doudizhu' | 'gomoku' | 'flying' = 'none';
 
   ws.on('message', (raw) => {
-    let msg: ClientToServer;
+    let parsed: unknown;
     try {
-      msg = JSON.parse(String(raw)) as ClientToServer;
+      parsed = JSON.parse(String(raw));
     } catch {
       send(ws, { type: 'error', message: '无效消息' });
       return;
     }
 
+    if (mode === 'gomoku' || (mode === 'none' && isGomokuJoin(parsed))) {
+      if (mode === 'none' && isGomokuJoin(parsed)) {
+        mode = 'gomoku';
+        handleGomokuJoin(ws, parsed);
+        return;
+      }
+      handleGomokuMessage(ws, parsed);
+      return;
+    }
+
+    if (mode === 'flying' || (mode === 'none' && isFlyingJoin(parsed))) {
+      if (mode === 'none' && isFlyingJoin(parsed)) {
+        mode = 'flying';
+        handleFlyingJoin(ws, parsed);
+        return;
+      }
+      handleFlyingMessage(ws, parsed);
+      return;
+    }
+
+    const msg = parsed as ClientToServer;
     if (msg.type === 'join') {
+      mode = 'doudizhu';
       const room = getRoom(msg.roomId || 'room1');
       const name = (msg.name || '玩家').slice(0, 12);
 
@@ -359,6 +394,14 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    if (mode === 'gomoku') {
+      handleGomokuClose(ws);
+      return;
+    }
+    if (mode === 'flying') {
+      handleFlyingClose(ws);
+      return;
+    }
     if (!joinedRoomId) return;
     const room = rooms.get(joinedRoomId);
     if (!room) return;
@@ -374,7 +417,7 @@ server.listen(PORT, '0.0.0.0', () => {
   const ips = lanAddresses();
   console.log('');
   console.log('========================================');
-  console.log('  斗地主联机服务已启动');
+  console.log('  联机服务已启动（斗地主 + 五子棋 + 飞行棋）');
   console.log(`  端口: ${PORT}`);
   console.log('  局域网请填写：');
   if (ips.length) ips.forEach((ip) => console.log(`    ${ip}`));

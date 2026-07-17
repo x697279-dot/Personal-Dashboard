@@ -9,6 +9,8 @@ RUN npm install
 
 COPY server ./server
 COPY src/doudizhu ./src/doudizhu
+COPY src/gomoku ./src/gomoku
+COPY src/flying ./src/flying
 COPY tsconfig.json ./
 
 ENV PORT=3789

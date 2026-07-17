@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Button } from 'antd';
 import { AirplaneGamePage } from './AirplaneGamePage';
 import { DoudizhuPage } from './DoudizhuPage';
 import { GamePage } from './GamePage';
+import { FlyingChessPage } from './FlyingChessPage';
+import { GomokuPage } from './GomokuPage';
 import { MinesweeperGamePage } from './MinesweeperGamePage';
 import { PlatformerGamePage } from './PlatformerGamePage';
 import { scrollToTop } from './scrollToTop';
@@ -118,6 +121,28 @@ const games = [
     loadingDesc: '正在洗牌、准备叫抢地主...',
     accent: 'doudizhu',
   },
+  {
+    id: 'gomoku',
+    badge: 'GOMOKU',
+    title: '五子棋',
+    description: '15×15 标准对弈：人机练手，或 1v1 联机；30 秒行棋、悔棋协商、支持观战。',
+    hash: '#/game/gomoku',
+    buttonText: '开始五子棋',
+    loadingTitle: 'GOMOKU',
+    loadingDesc: '正在铺开棋盘、准备黑白对弈...',
+    accent: 'gomoku',
+  },
+  {
+    id: 'flying',
+    badge: 'FLYING',
+    title: '飞行棋',
+    description: '轻量 2～4 人：掷骰走格、起飞撞飞，同屏或联机，适合家庭朋友局。',
+    hash: '#/game/flying',
+    buttonText: '开始飞行棋',
+    loadingTitle: 'FLYING CHESS',
+    loadingDesc: '正在摆好四色基地、准备起飞...',
+    accent: 'flying',
+  },
 ] as const;
 
 type GameEntry = (typeof games)[number];
@@ -166,7 +191,7 @@ function HomePage() {
             <span>快乐星球</span>
             <span>准备出发。</span>
           </h1>
-          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战、奶牛闯关、废土幸存者、扫雷、蜘蛛纸牌或斗地主。</p>
+          <p className="capy-subtitle">选择一款小游戏，进入 3D 海滨城市、飞机大战、奶牛闯关、废土幸存者、扫雷、蜘蛛纸牌、斗地主、五子棋或飞行棋。</p>
         </div>
 
         <div className="capy-stage" aria-hidden="true">
@@ -183,7 +208,7 @@ function HomePage() {
       <section className="capy-games-shell" aria-label="游戏选择">
         <div className="capy-games-intro">
           <p className="capy-kicker">Pick Your Game</p>
-          <h2>七款小游戏，随时开玩。</h2>
+          <h2>九款小游戏，随时开玩。</h2>
         </div>
 
         <div className="capy-games-grid">
@@ -192,22 +217,24 @@ function HomePage() {
               <p className="capy-game-badge">{game.badge}</p>
               <h3>{game.title}</h3>
               <p>{game.description}</p>
-              <button
+              <Button
                 className="capy-start-button capy-game-start-button"
-                type="button"
+                type="primary"
+                size="middle"
                 disabled={Boolean(startingGame)}
+                loading={startingGame?.id === game.id}
                 onClick={() => startGame(game)}
               >
-                <span>{startingGame?.id === game.id ? '正在进入...' : game.buttonText}</span>
-              </button>
+                {startingGame?.id === game.id ? '正在进入...' : game.buttonText}
+              </Button>
             </article>
           ))}
         </div>
       </section>
 
       <div className="capy-marquee" aria-hidden="true">
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DOU DIZHU · DRIVE · </span>
-        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DOU DIZHU · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DOU DIZHU · GOMOKU · FLYING · DRIVE · </span>
+        <span>CAPYLULU · 3D GAME · SKY STRIKE · COW QUEST · WASTELAND · MINEFIELD · SPIDER · DOU DIZHU · GOMOKU · FLYING · DRIVE · </span>
       </div>
 
       <section className="capy-gallery-shell" aria-label="素材图片展示">
@@ -250,7 +277,11 @@ function App() {
           ? ['.mines-page']
           : next === '#/game/spider'
             ? ['.spider-page']
-            : [],
+            : next === '#/game/gomoku'
+              ? ['.gomoku-page']
+              : next === '#/game/flying'
+                ? ['.fly-page']
+                : [],
       );
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -262,6 +293,10 @@ function App() {
       scrollToTop(['.mines-page']);
     } else if (route === '#/game/spider') {
       scrollToTop(['.spider-page']);
+    } else if (route === '#/game/gomoku') {
+      scrollToTop(['.gomoku-page']);
+    } else if (route === '#/game/flying') {
+      scrollToTop(['.fly-page']);
     }
   }, [route]);
 
@@ -272,6 +307,8 @@ function App() {
   if (route === '#/game/minesweeper') return <MinesweeperGamePage />;
   if (route === '#/game/spider') return <SpiderSolitairePage />;
   if (route === '#/game/doudizhu') return <DoudizhuPage />;
+  if (route === '#/game/gomoku') return <GomokuPage />;
+  if (route === '#/game/flying') return <FlyingChessPage />;
   return <HomePage />;
 }
 

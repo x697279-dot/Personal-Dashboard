@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { Button, Input, Select } from 'antd';
 import { chooseAction, listLegalPlays, type AiDifficulty } from './doudizhu/ai/bot';
 import {
   applyBid,
@@ -949,9 +950,9 @@ function DoudizhuPage() {
   if (screen === 'menu') {
     return (
       <div className="ddz-page" onPointerDown={() => void unlockDdzAudio()}>
-        <button type="button" className="ddz-back" onClick={() => { window.location.hash = '#/'; }}>
+        <Button className="ddz-back" onClick={() => { window.location.hash = '#/'; }}>
           返回主页
-        </button>
+        </Button>
         <BgmPlayer className="ddz-bgm-float" />
         <section className="ddz-hero">
           <p className="ddz-kicker">DOU DIZHU · CAPYLULU</p>
@@ -980,52 +981,42 @@ function DoudizhuPage() {
   if (screen === 'solo-setup') {
     return (
       <div className="ddz-page">
-        <button type="button" className="ddz-back" onClick={() => setScreen('menu')}>
+        <Button className="ddz-back" onClick={() => setScreen('menu')}>
           返回
-        </button>
+        </Button>
         <section className="ddz-setup">
           <h2>单机设置</h2>
           <p>你固定坐在座位 1，对战两位电脑。</p>
-          <label>
+          <label className="fly-antd-field">
             上家 AI
-            <select value={aiDiffs[0]} onChange={(e) => setAiDiffs([e.target.value as AiDifficulty, aiDiffs[1]])}>
-              {(Object.keys(AI_LABEL) as AiDifficulty[]).map((k) => (
-                <option key={k} value={k}>
-                  {AI_LABEL[k]}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={aiDiffs[0]}
+              options={(Object.keys(AI_LABEL) as AiDifficulty[]).map((k) => ({ value: k, label: AI_LABEL[k] }))}
+              onChange={(v) => setAiDiffs([v, aiDiffs[1]])}
+            />
           </label>
-          <label>
+          <label className="fly-antd-field">
             下家 AI
-            <select value={aiDiffs[1]} onChange={(e) => setAiDiffs([aiDiffs[0], e.target.value as AiDifficulty])}>
-              {(Object.keys(AI_LABEL) as AiDifficulty[]).map((k) => (
-                <option key={k} value={k}>
-                  {AI_LABEL[k]}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={aiDiffs[1]}
+              options={(Object.keys(AI_LABEL) as AiDifficulty[]).map((k) => ({ value: k, label: AI_LABEL[k] }))}
+              onChange={(v) => setAiDiffs([aiDiffs[0], v])}
+            />
           </label>
-          <label>
+          <label className="fly-antd-field">
             快捷：双方同难度
-            <select
+            <Select
               value={difficulty}
-              onChange={(e) => {
-                const d = e.target.value as AiDifficulty;
+              options={(Object.keys(AI_LABEL) as AiDifficulty[]).map((k) => ({ value: k, label: AI_LABEL[k] }))}
+              onChange={(d) => {
                 setDifficulty(d);
                 setAiDiffs([d, d]);
               }}
-            >
-              {(Object.keys(AI_LABEL) as AiDifficulty[]).map((k) => (
-                <option key={k} value={k}>
-                  {AI_LABEL[k]}
-                </option>
-              ))}
-            </select>
+            />
           </label>
-          <button type="button" className="ddz-primary" onClick={startSolo}>
+          <Button type="primary" size="large" block onClick={startSolo}>
             开始游戏
-          </button>
+          </Button>
         </section>
       </div>
     );
@@ -1034,39 +1025,40 @@ function DoudizhuPage() {
   if (screen === 'lan-setup') {
     return (
       <div className="ddz-page">
-        <button type="button" className="ddz-back" onClick={() => setScreen('menu')}>
+        <Button className="ddz-back" onClick={() => setScreen('menu')}>
           返回
-        </button>
+        </Button>
         <section className="ddz-setup">
           <h2>联机对战</h2>
-          <label>
+          <label className="fly-antd-field">
             昵称
-            <input value={lanName} onChange={(e) => setLanName(e.target.value)} maxLength={12} />
+            <Input value={lanName} maxLength={12} onChange={(e) => setLanName(e.target.value)} />
           </label>
-          <label>
+          <label className="fly-antd-field">
             房间号
-            <input value={lanRoom} onChange={(e) => setLanRoom(e.target.value)} />
+            <Input value={lanRoom} onChange={(e) => setLanRoom(e.target.value)} />
           </label>
-          <label>
+          <label className="fly-antd-field">
             服务器地址
-            <input
+            <Input
               value={lanHost}
-              onChange={(e) => setLanHost(e.target.value)}
               placeholder={pageIsHttps ? 'xjy-ws.onrender.com' : '192.168.1.8'}
+              onChange={(e) => setLanHost(e.target.value)}
             />
           </label>
-          <label>
+          <label className="fly-antd-field">
             端口
-            <input className="is-locked" value={fixedPort} readOnly disabled title="端口已固定" />
+            <Input value={fixedPort} disabled />
           </label>
-          <button
-            type="button"
-            className="ddz-primary"
+          <Button
+            type="primary"
+            size="large"
+            block
             onClick={connectLan}
-            disabled={lanConnectStep === 'connecting' || lanConnectStep === 'joining'}
+            loading={lanConnectStep === 'connecting' || lanConnectStep === 'joining'}
           >
             {lanConnectStep === 'connecting' || lanConnectStep === 'joining' ? '连接中…' : '连接并加入'}
-          </button>
+          </Button>
           {lanConnectStep !== 'idle' ? (
             <div className={`ddz-connect-status is-${lanConnectStep}`}>
               <ol className="ddz-connect-steps">

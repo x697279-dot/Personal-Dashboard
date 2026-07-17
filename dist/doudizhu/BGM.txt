@@ -7,7 +7,7 @@
   bgm-02-moment-of-peace.mp3        — MickeysCat / Moment of Peace
   bgm-03-no-copyright-music.mp3     — SigmaMusicArt / No Copyright Music
   bgm-04-escape-your-love.mp3       — FASSounds / Escape Your Love
-  bgm-05-carnaval.mp3               — Alec_Koff / Carnaval  
+  bgm-05-carnaval.mp3               — Alec_Koff / Carnaval
   bgm-06-trending-music.mp3         — SigmaMusicArt / No Copyright Trending Music
   bgm-07-happy-music.mp3            — ProductionMusic / Happy Happy Music
   bgm-08-bass.mp3                   — JonasBlakeWood / Bass

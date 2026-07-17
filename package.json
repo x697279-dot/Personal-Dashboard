@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
+    "antd": "^6.5.1",
     "phaser": "^4.1.0",
     "react": "latest",
     "react-dom": "latest",
